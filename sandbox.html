@@ -16,7 +16,8 @@
   converter.html page (UI + three.js viewer, neither of which need eval)
   talks to this page via postMessage. Sandboxed pages cannot call chrome.*
   APIs, which is fine since this page only ever needs fetch() for its own
-  local vendor/ files.
+  local files (opencascade.full.js and the opencascade.full.wasm.partNN
+  chunks, all in this same directory).
 -->
 <script type="module" src="sandbox.js"></script>
 </body>

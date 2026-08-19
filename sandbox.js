@@ -3,7 +3,12 @@
 // postMessage, builds a sewn BREP solid with OpenCASCADE-WASM, writes it to
 // STEP, and posts the resulting bytes back.
 
-const OCJS_BASE = "./vendor/opencascade/";
+// Todos los archivos viven en el mismo directorio plano (sin subcarpetas
+// vendor/...): el subidor web de GitHub aplana la estructura de carpetas al
+// arrastrar archivos sueltos (solo la conserva arrastrando carpetas reales
+// desde el explorador, poco fiable en la práctica), así que este sitio se
+// empaqueta ya así a propósito para no depender de eso.
+const OCJS_BASE = "./";
 // El .wasm de OpenCASCADE pesa ~50 MB, muy por encima de lo que el subidor
 // web de GitHub acepta de una vez (necesario para poder alojar este sitio
 // sin usar git por línea de comandos -- con archivos de ~20 MB seguía

@@ -16,11 +16,11 @@ Safari en iOS/iPadOS bloquea `fetch()` y los módulos ES (`import`) cuando la p�
 directamente desde el sistema de archivos (`file://`). Esta página los usa para cargar
 OpenCASCADE-WASM y three.js, así que necesita servirse por `https://` desde algún sitio.
 
-La opción más sencilla y gratuita es **GitHub Pages**:
+La opción usada es **GitHub Pages** (gratis, URL HTTPS estable):
 
-1. Crea un repositorio nuevo en GitHub (puede ser privado o público).
-2. Sube el contenido de esta carpeta tal cual (todos los archivos y subcarpetas: `converter.html`,
-   `converter.js`, `sandbox.html`, `sandbox.js`, `icons/`, `vendor/`).
+1. Crea un repositorio nuevo en GitHub (público, necesario para Pages gratis).
+2. Sube **todos los archivos de esta carpeta directamente en la raíz del repositorio, sin
+   subcarpetas** (ver nota más abajo sobre por qué está todo en un único nivel).
 3. En el repositorio: **Settings → Pages → Source → Deploy from a branch**, elige la rama
    (normalmente `main`) y la carpeta raíz (`/`).
 4. Espera 1-2 minutos y GitHub te da una URL del tipo
@@ -30,6 +30,27 @@ La opción más sencilla y gratuita es **GitHub Pages**:
 
 Alternativas igual de válidas si ya usas otra cosa: Netlify, Vercel, Cloudflare Pages, o
 cualquier hosting estático que sirva por HTTPS.
+
+### Por qué está todo en un único nivel (sin `vendor/`, sin subcarpetas)
+
+El subidor web de GitHub ("Add file → Upload files") tiene dos límites poco documentados,
+descubiertos al subir esto de verdad:
+
+- Un archivo suelto de ~48 MB (el `.wasm` de OpenCASCADE) falla siempre con "the file is too
+  large", aunque el límite oficial de GitHub es 25 MB por archivo. Trocearlo en partes de 20 MB
+  tampoco bastó: seguía fallando igual, lo que apunta a un límite sobre el **total** subido de
+  una vez, no solo por archivo. Con partes de 5 MB (`opencascade.full.wasm.part00` a `part10`,
+  11 en total) sí funciona.
+- Arrastrar varios archivos sueltos de carpetas distintas (en vez de una única carpeta real)
+  aplana la estructura: todo termina en la raíz del repositorio sin importar las subcarpetas
+  originales. Por eso el código de este sitio (`converter.js`, `sandbox.js`, `OrbitControls.js`)
+  usa rutas relativas planas (`./three.module.js`, no `./vendor/three/three.module.js`) y todos
+  los archivos van sueltos en la raíz, a propósito — así la subida es fiable sin depender de que
+  el navegador conserve la jerarquía de carpetas al arrastrar.
+
+Si en vez de la web usas `git` por línea de comandos (o GitHub Desktop) no tienes ninguna de
+estas dos limitaciones, y podrías perfectamente reorganizar todo en subcarpetas si lo prefieres
+— solo recuerda actualizar las rutas relativas en esos tres archivos si lo haces.
 
 ## Aviso sobre las pruebas realizadas
 
@@ -55,6 +76,5 @@ pequeño antes de confiar en ella para piezas importantes.
    uses normalmente para tu impresora (por ejemplo Bambu Handy, si es una Bambu Lab).
 
 Sobre el envío a imprimir: esa parte queda fuera de esta herramienta (que solo convierte
-STL/3MF → STEP) — se hace con la app de tu impresora, igual que ya haces normalmente.
-Una nota aparte: mencionaste tu impresora como "H2C"; si te referías al modelo H2D de Bambu
-Lab, dímelo y lo dejo anotado, pero no he querido asumirlo sin confirmar.
+STL/3MF → STEP) — se hace con la app de tu impresora (Bambu Lab H2C), igual que ya haces
+normalmente.
