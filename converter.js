@@ -533,8 +533,7 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
   }
 
   fnameEl.textContent = name + " (leyendo ZIP...)";
-  convertBtn.disabled = true;
-  convertBtn.textContent = "Elige un STL o 3MF para convertir";
+  convertBtn.style.display = "none";
 
   try {
     const buf = await getBuffer();
@@ -593,11 +592,7 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
   }
 }
 
-function setPendingFile(pf) {
-  pendingFile = pf;
-  fnameEl.textContent = pf.name + (pf.size ? " (" + (pf.size/1024).toFixed(0) + " KB)" : "");
-  convertBtn.disabled = false;
-  convertBtn.textContent = "Convertir a STEP";
+function setPendingFile(pf) { pendingFile = pf; fnameEl.textContent = pf.name + (pf.size ? " (" + (pf.size/1024).toFixed(0) + " KB)" : ""); convertBtn.style.display = "block"; convertBtn.disabled = false; convertBtn.textContent = "Convertir a STEP";
   resultsPanel.style.display = "none";
 }
 
