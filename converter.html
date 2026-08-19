@@ -168,10 +168,7 @@
 <div class="wrap">
   <h1>Convertidor STL/3MF → STEP <span class="badge">100% en tu navegador</span></h1>
   <p class="subtitle">
-    Convierte una malla STL o 3MF a un sólido STEP cerrado usando OpenCASCADE compilado a WebAssembly.
-    Nada se sube a ningún servidor: todo el cálculo ocurre localmente en esta pestaña.
-    Incluye un suavizado opcional con un límite de desplazamiento garantizado, para reducir el aspecto
-    "poligonal" sin arriesgar el ajuste ni las medidas funcionales de la pieza.
+    Convierte un STL o 3MF a un sólido STEP cerrado, con suavizado opcional sin arriesgar las medidas de la pieza.
   </p>
 
   <div class="panel">
@@ -183,8 +180,7 @@
       <input type="file" id="fileInput">
     </div>
     <div class="hint">
-      Si arrastras un .zip (habitual al descargar de webs de modelos 3D), se abre automáticamente y se
-      busca dentro el .stl o .3mf. Si hay varios, podrás elegir cuál convertir.
+      Los .zip se abren automáticamente para buscar el .stl/.3mf dentro.
     </div>
   </div>
 
@@ -200,14 +196,11 @@
       <div class="rangeval" id="maxDispVal">0.10 mm</div>
     </div>
     <div class="hint">
-      0 mm = conversión pura, sin suavizar (geometría facetada tal cual). Un valor mayor permite que el
-      suavizado mueva cada vértice hasta esa distancia como máximo — nunca más — así que las medidas
-      generales de la pieza quedan garantizadas dentro de ese margen. Aristas largas/finas y vértices
-      irregulares (posibles zonas de encaje o detalles delicados) se detectan automáticamente y no se tocan.
+      0 mm = sin suavizar. Un valor mayor suaviza sin mover ningún vértice más de esa distancia, protegiendo automáticamente bordes y zonas de encaje.
     </div>
   </div>
 
-  <button class="primary" id="convertBtn" disabled>Elige un STL o 3MF para convertir</button>
+  <button class="primary" id="convertBtn" style="display:none;">Convertir a STEP</button>
 
   <div class="panel" id="progressPanel" style="display:none;">
     <div class="progress-outer"><div class="progress-inner" id="progressBar"></div></div>
@@ -234,13 +227,11 @@
     <div id="viewerCanvasWrap">
       <div id="viewerLoading">Cargando visor 3D...</div>
     </div>
-    <div class="viewer-hint">Arrastra para rotar, rueda para zoom, clic derecho para desplazar. Esta es exactamente la geometria que se exporto al STEP.</div>
+    <div class="viewer-hint">Arrastra para rotar, rueda para zoom, clic derecho para desplazar.</div>
   </div>
 
   <footer>
-    Usa <a href="https://ocjs.org" target="_blank" rel="noopener">opencascade.js</a> (OpenCASCADE compilado a WASM) y three.js, cargados una vez desde esta misma página — a partir de ahí todo el cálculo ocurre en tu dispositivo, sin subir nada a ningún servidor.
-    Modelos con muchos triángulos (decenas de miles) pueden tardar uno o dos minutos en convertirse.
-    El soporte 3MF cubre piezas de un solo componente (el caso más común); ensamblajes multi-pieza complejos pueden no importarse completos.
+    Modelos con muchos triángulos pueden tardar uno o dos minutos en convertirse. El soporte 3MF cubre piezas de un solo componente; ensamblajes multi-pieza complejos pueden no importarse completos.
   </footer>
 </div>
 
