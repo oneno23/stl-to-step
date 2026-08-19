@@ -197,7 +197,7 @@ async function parse3MF(buffer) {
   }
 
   const rootDoc = await loadModelDoc("3D/3dmodel.model");
-  if (!rootDoc) throw new Error("No se encontro 3D/3dmodel.model dentro del .3mf.");
+  if (!rootDoc) throw new Error("3D/3dmodel.model not found dentro del .3mf.");
 
   const buildEls = rootDoc.getElementsByTagName("build");
   const itemEls = buildEls.length ? buildEls[0].getElementsByTagName("item") : [];
@@ -228,7 +228,7 @@ async function parse3MF(buffer) {
 
   if (!rawTris.length) {
     throw new Error(
-      "El .3mf no contiene triangulos de malla reconocibles tras seguir <build>/<components> " +
+      "The .3mf doesn't contain triangles de malla reconocibles tras seguir <build>/<components> " +
       "(incluyendo archivos externos en 3D/Objects/). Puede que use una variante del formato no soportada."
     );
   }
@@ -499,7 +499,7 @@ let pendingFile = null;
 
 maxDispSlider.addEventListener("input", () => {
   const v = parseFloat(maxDispSlider.value);
-  maxDispVal.textContent = v === 0 ? "sin suavizar" : v.toFixed(2) + " mm";
+  maxDispVal.textContent = v === 0 ? "no smoothing" : v.toFixed(2) + " mm";
 });
 
 dropzone.addEventListener("click", () => fileInput.click());
@@ -532,7 +532,7 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
     return;
   }
 
-  fnameEl.textContent = name + " (leyendo ZIP...)";
+  fnameEl.textContent = name + " (reading ZIP...)";
   convertBtn.style.display = "none";
 
   try {
@@ -543,7 +543,7 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
     );
 
     if (entries.length === 0) {
-      throw new Error("Este ZIP no contiene ningun archivo .stl o .3mf reconocible.");
+      throw new Error("This ZIP doesn't contain any recognizable .stl or .3mf file.");
     }
 
     if (entries.length === 1) {
@@ -556,7 +556,7 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
     }
 
     // Multiple candidates: let the user choose which one to convert.
-    fnameEl.textContent = `${name} (${entries.length} archivos encontrados, elige uno abajo)`;
+    fnameEl.textContent = `${name} (${entries.length} files found, choose one below)`;
     zipPickerPanel.style.display = "block";
     for (const entryPath of entries) {
       const item = document.createElement("div");
@@ -572,7 +572,7 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
       item.addEventListener("click", async () => {
         Array.from(zipPickerList.children).forEach((c) => c.classList.remove("selected"));
         item.classList.add("selected");
-        sizeSpan.textContent = "cargando...";
+        sizeSpan.textContent = "loading...";
         const innerBuf = await zip.files[entryPath].async("arraybuffer");
         const innerName = entryPath.split("/").pop();
         setPendingFile({ name: innerName, size: innerBuf.byteLength, getBuffer: async () => innerBuf });
@@ -592,7 +592,7 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
   }
 }
 
-function setPendingFile(pf) { pendingFile = pf; fnameEl.textContent = pf.name + (pf.size ? " (" + (pf.size/1024).toFixed(0) + " KB)" : ""); convertBtn.style.display = "block"; convertBtn.disabled = false; convertBtn.textContent = "Convertir a STEP";
+function setPendingFile(pf) { pendingFile = pf; fnameEl.textContent = pf.name + (pf.size ? " (" + (pf.size/1024).toFixed(0) + " KB)" : ""); convertBtn.style.display = "block"; convertBtn.disabled = false; convertBtn.textContent = "Convert to STEP";
   resultsPanel.style.display = "none";
 }
 
@@ -696,7 +696,7 @@ convertBtn.addEventListener("click", async () => {
     const t0 = performance.now();
 
     const isThreeMF = /\.3mf$/i.test(pendingFile.name);
-    log(isThreeMF ? "Leyendo 3MF..." : "Leyendo STL...");
+    log(isThreeMF ? "Reading 3MF..." : "Reading STL...");
     const buf = await pendingFile.getBuffer();
     const rawTris = isThreeMF ? await parse3MF(buf) : parseSTL(buf);
     const { vertices, faces } = buildMesh(rawTris);
@@ -719,13 +719,13 @@ convertBtn.addEventListener("click", async () => {
       const r = smoothMesh(vertices, adjacency, frozen, { lambda: 0.25, iterations: 30, maxDisp });
       smoothed = r.vertices; stats = r.stats;
     } else {
-      log("Sin suavizado (conversion directa).");
+      log("No smoothing (direct conversion).");
     }
     const after = meshVolumeAndBBox(smoothed, faces);
     setProgress(5);
 
     setProgress(10);
-    const outName = (pendingFile.name.replace(/\.(stl|3mf)$/i, "") || "modelo") + (maxDisp > 0 ? "_suavizado" : "") + ".step";
+    const outName = (pendingFile.name.replace(/\.(stl|3mf)$/i, "") || "modelo") + (maxDisp > 0 ? "_smoothed" : "") + ".step";
 
     const { buffer, byteLength } = await convertInSandbox(smoothed, faces, {
       onLog: (text, cls) => log(text, cls),
@@ -733,7 +733,7 @@ convertBtn.addEventListener("click", async () => {
     });
     const data = new Uint8Array(buffer, 0, byteLength);
 
-    log(`Tiempo total: ${((performance.now()-t0)/1000).toFixed(1)} s.`);
+    log(`Total time: ${((performance.now()-t0)/1000).toFixed(1)} s.`);
 
     const blob = new Blob([data], { type: "application/step" });
     const url = URL.createObjectURL(blob);
@@ -741,14 +741,14 @@ convertBtn.addEventListener("click", async () => {
     downloadBtn.download = outName;
 
     statsTable.innerHTML = `
-      <tr><td>Volumen original</td><td>${orig.volume.toFixed(2)} mm&sup3;</td></tr>
-      <tr><td>Volumen resultado</td><td>${after.volume.toFixed(2)} mm&sup3; (${(after.volume-orig.volume>=0?"+":"")}${(after.volume-orig.volume).toFixed(2)})</td></tr>
-      <tr><td>Bounding box original</td><td>${orig.extents.map(x=>x.toFixed(2)).join(" x ")} mm</td></tr>
-      <tr><td>Bounding box resultado</td><td>${after.extents.map(x=>x.toFixed(2)).join(" x ")} mm</td></tr>
-      <tr><td>Desplazamiento maximo</td><td>${stats.maxDisp.toFixed(3)} mm</td></tr>
-      <tr><td>Desplazamiento medio</td><td>${stats.meanDisp.toFixed(3)} mm</td></tr>
-      <tr><td>Vertices protegidos (sin tocar)</td><td>${frozenCount} / ${vertices.length}</td></tr>
-      <tr><td>Tamano del STEP</td><td>${(data.length/1024/1024).toFixed(1)} MB</td></tr>
+      <tr><td>Original volume</td><td>${orig.volume.toFixed(2)} mm&sup3;</td></tr>
+      <tr><td>Result volume</td><td>${after.volume.toFixed(2)} mm&sup3; (${(after.volume-orig.volume>=0?"+":"")}${(after.volume-orig.volume).toFixed(2)})</td></tr>
+      <tr><td>Original bounding box</td><td>${orig.extents.map(x=>x.toFixed(2)).join(" x ")} mm</td></tr>
+      <tr><td>Result bounding box</td><td>${after.extents.map(x=>x.toFixed(2)).join(" x ")} mm</td></tr>
+      <tr><td>Max displacement</td><td>${stats.maxDisp.toFixed(3)} mm</td></tr>
+      <tr><td>Mean displacement</td><td>${stats.meanDisp.toFixed(3)} mm</td></tr>
+      <tr><td>Protected vertices (sin tocar)</td><td>${frozenCount} / ${vertices.length}</td></tr>
+      <tr><td>STEP file size</td><td>${(data.length/1024/1024).toFixed(1)} MB</td></tr>
     `;
     resultsPanel.style.display = "block";
 
@@ -768,6 +768,6 @@ convertBtn.addEventListener("click", async () => {
     log("ERROR: " + (err && err.stack ? err.stack : (err && err.message ? err.message : String(err))), "warn");
   } finally {
     convertBtn.disabled = false;
-    convertBtn.textContent = "Convertir a STEP";
+    convertBtn.textContent = "Convert to STEP";
   }
 });
