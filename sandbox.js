@@ -27,9 +27,9 @@ async function loadWasmBinary(onLog) {
   const buffers = [];
   let total = 0;
   for (let i = 0; i < WASM_PARTS.length; i++) {
-    onLog(`Descargando OpenCASCADE (parte ${i + 1}/${WASM_PARTS.length})...`);
+    onLog(`Downloading OpenCASCADE (part ${i + 1}/${WASM_PARTS.length})...`);
     const resp = await fetch(OCJS_BASE + WASM_PARTS[i]);
-    if (!resp.ok) throw new Error(`No se pudo descargar ${WASM_PARTS[i]} (HTTP ${resp.status})`);
+    if (!resp.ok) throw new Error(`Could not download ${WASM_PARTS[i]} (HTTP ${resp.status})`);
     const buf = await resp.arrayBuffer();
     buffers.push(buf);
     total += buf.byteLength;
@@ -46,12 +46,12 @@ async function loadWasmBinary(onLog) {
 async function loadOC(onLog) {
   if (ocPromise) return ocPromise;
   ocPromise = (async () => {
-    onLog("Cargando OpenCASCADE (WebAssembly)...");
+    onLog("Loading OpenCASCADE (WebAssembly)...");
     const mod = await import(OCJS_BASE + "opencascade.full.js");
     const ocFullJS = mod.default;
     const wasmBinary = await loadWasmBinary(onLog);
     const oc = await new ocFullJS({ wasmBinary });
-    onLog("OpenCASCADE listo.", "ok");
+    onLog("OpenCASCADE ready.", "ok");
     return oc;
   })();
   return ocPromise;
@@ -78,7 +78,7 @@ async function handleConvert(msg, respond) {
     }
 
     const nFaces = faces.length / 3;
-    log(`Construyendo ${nFaces} caras...`);
+    log(`Building ${nFaces} faces...`);
     const sewing = new oc.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
     let built = 0;
     for (let fi = 0; fi < nFaces; fi++) {
@@ -92,11 +92,11 @@ async function handleConvert(msg, respond) {
       built++;
       if (built % 1500 === 0) {
         progress(10 + 40 * built / nFaces);
-        log(`  ${built}/${nFaces} caras...`);
+        log(`  ${built}/${nFaces} faces...`);
         await yieldFrame();
       }
     }
-    log(`Caras listas: ${built}.`);
+    log(`Faces ready: ${built}.`);
     progress(50);
     await yieldFrame();
 
@@ -114,9 +114,9 @@ async function handleConvert(msg, respond) {
     const estText = estSeconds < 20
       ? ""
       : estSeconds < 90
-        ? ` (estimado ~${estSeconds}s, no cierres esta pestaña)`
-        : ` (estimado ~${Math.round(estSeconds / 60)} min, no cierres esta pestaña)`;
-    log(`Cosiendo superficie${estText}...`);
+        ? ` (estimated ~${estSeconds}s, don't close this tab)`
+        : ` (estimated ~${Math.round(estSeconds / 60)} min, don't close this tab)`;
+    log(`Sewing surface${estText}...`);
     sewing.Perform(new oc.Message_ProgressRange_1());
     const sewed = sewing.SewedShape();
     progress(75);
@@ -129,24 +129,24 @@ async function handleConvert(msg, respond) {
       const solidMaker = new oc.BRepBuilderAPI_MakeSolid_3(shell);
       if (solidMaker.IsDone()) {
         shapeToWrite = solidMaker.Solid();
-        log("Solido cerrado construido.", "ok");
+        log("Closed solid built.", "ok");
       } else {
-        log("No se pudo cerrar como solido; se exporta como superficie cosida.", "warn");
+        log("Could not close as a solid; exporting as a sewn surface.", "warn");
       }
     } else {
-      log("No se detecto una superficie cerrada; se exporta tal cual.", "warn");
+      log("No closed surface detected; exporting as-is.", "warn");
     }
     progress(85);
     await yieldFrame();
 
-    log("Exportando a STEP...");
+    log("Exporting to STEP...");
     const writer = new oc.STEPControl_Writer_1();
     writer.Transfer(shapeToWrite, oc.STEPControl_StepModelType.STEPControl_AsIs, true, new oc.Message_ProgressRange_1());
     const virtualName = "output.step";
     writer.Write(virtualName);
     const data = oc.FS.readFile(virtualName);
     progress(100);
-    log(`STEP generado: ${(data.length / 1024 / 1024).toFixed(1)} MB.`, "ok");
+    log(`STEP generated: ${(data.length / 1024 / 1024).toFixed(1)} MB.`, "ok");
 
     const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
     respond({ type: "done", requestId, buffer: buf, byteLength: data.length, outName }, [buf]);
