@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>sandbox</title>
+</head>
+<body>
+<!--
+  This page is declared in manifest.json under "sandbox.pages". Sandboxed
+  extension pages run in an opaque ("null") origin with a relaxed default
+  CSP that permits 'unsafe-eval' (and 'unsafe-inline'), unlike normal
+  extension pages which are locked to script-src 'self' with no eval at
+  all. opencascade.js's Emscripten/embind glue code calls `new Function(...)`
+  during startup (to name error classes), which needs 'unsafe-eval' — so
+  all of the actual OpenCASCADE/WASM work happens in here, and the main
+  converter.html page (UI + three.js viewer, neither of which need eval)
+  talks to this page via postMessage. Sandboxed pages cannot call chrome.*
+  APIs, which is fine since this page only ever needs fetch() for its own
+  local vendor/ files.
+-->
+<script type="module" src="sandbox.js"></script>
+</body>
+</html>
