@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get the browser extension — STL/3MF to STEP Converter</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-border: #262b36;
+    --text: #e8eaed;
+    --text-dim: #9aa2b1;
+    --accent: #5b8def;
+    --accent-dim: #2c3f66;
+    --ok: #4caf7d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 32px 16px 64px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin: 0 0 28px; max-width: 60ch; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  h3 { font-size: 14px; margin: 20px 0 8px; color: var(--text); }
+  p, li { color: var(--text); font-size: 14px; }
+  ol, ul { margin: 8px 0; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+  @media (max-width: 620px) { .cards { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 22px 22px 24px;
+    margin-bottom: 16px;
+  }
+  .browser-icon { width: 40px; height: 40px; margin-bottom: 10px; }
+  .download-btn {
+    display: block;
+    text-align: center;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 13px;
+    border-radius: 8px;
+    margin: 14px 0 6px;
+  }
+  .version { font-size: 12px; color: var(--text-dim); }
+  .steps-panel { padding: 20px 24px; }
+  .updated { color: var(--text-dim); font-size: 12px; margin-bottom: 24px; }
+  .back { display: inline-block; margin-top: 24px; font-size: 14px; }
+  footer { color: var(--text-dim); font-size: 12px; text-align: center; margin-top: 32px; }
+  code {
+    background: rgba(91,141,239,0.12);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .note {
+    font-size: 13px;
+    color: var(--text-dim);
+    background: rgba(91,141,239,0.06);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Get the browser extension</h1>
+  <p class="subtitle">
+    A lighter, browser-integrated version of the converter: it watches your downloads and offers
+    a one-click "Convert to STEP" whenever you download an .stl or .3mf file from any site — no need
+    to open a tab and drag the file in yourself. Everything still runs 100% locally, exactly like the
+    web converter.
+  </p>
+
+  <div class="cards">
+    <div class="panel" style="text-align:center;">
+      <svg class="browser-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="20" fill="#fff"/>
+        <path d="M24 4a20 20 0 0 1 17.3 10H24a10 10 0 0 0-8.66 5L6.7 12.3A20 20 0 0 1 24 4z" fill="#EA4335"/>
+        <path d="M6.7 12.3 15.34 19A10 10 0 0 0 14 24c0 2.1.68 4.05 1.84 5.63L6.6 35.6A20 20 0 0 1 4 24a19.9 19.9 0 0 1 2.7-11.7z" fill="#34A853"/>
+        <path d="M15.84 29.63A10 10 0 0 0 24 34a10 10 0 0 0 8.66-5l9.44 5.7A20 20 0 0 1 24 44a20 20 0 0 1-17.4-8.4l9.24-6z" fill="#FBBC05"/>
+        <circle cx="24" cy="24" r="8" fill="#4285F4"/>
+      </svg>
+      <h2>Chrome</h2>
+      <div class="version">Version 1.0.0</div>
+      <a class="download-btn" id="chromeDownload" href="https://github.com/oneno23/stl-to-step-ipad/releases/download/extension-v1.0.0/stl-to-step-extension-chrome.zip">⬇ Download for Chrome</a>
+    </div>
+
+    <div class="panel" style="text-align:center;">
+      <svg class="browser-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="20" fill="#fff"/>
+        <path d="M24 6a18 18 0 0 1 17.6 14.2c-1.4-5-7.7-8.4-14.3-6.1-6.2 2.2-9.6 8.2-8.2 13.9-4.4-1.9-7.6-6.6-7.6-11.7A18 18 0 0 1 24 6z" fill="#34A2EA"/>
+        <path d="M11.5 30c1.6 4.4 6.5 8 12.5 8 7 0 12.9-4.4 15.4-10.4a15.7 15.7 0 0 1-11 4.6c-6 0-11-4.1-12.3-9.5-1 2.6-.7 5.2-4.6 7.3z" fill="#1A6FC4"/>
+        <circle cx="30" cy="14" r="4.5" fill="#59C4EA"/>
+      </svg>
+      <h2>Microsoft Edge</h2>
+      <div class="version">Version 1.0.0</div>
+      <a class="download-btn" id="edgeDownload" href="https://github.com/oneno23/stl-to-step-ipad/releases/download/extension-v1.0.0/stl-to-step-extension-edge.zip">⬇ Download for Edge</a>
+    </div>
+  </div>
+
+  <div class="panel steps-panel">
+    <h3>1. Unzip the download</h3>
+    <p>The extension isn't in the Chrome Web Store or the Edge Add-ons store — it's distributed directly as a
+      .zip so anyone can install and inspect it for free. Unzip it anywhere you like (double-click it on Mac,
+      or right-click → "Extract All" on Windows). You'll get a folder — keep it where it is, the browser will
+      keep loading the extension from that folder.</p>
+
+    <h3>2. Load it into your browser</h3>
+    <p><strong>Chrome:</strong></p>
+    <ol>
+      <li>Open <code>chrome://extensions</code></li>
+      <li>Turn on <strong>Developer mode</strong> (top-right toggle)</li>
+      <li>Click <strong>Load unpacked</strong></li>
+      <li>Select the unzipped folder</li>
+    </ol>
+    <p><strong>Edge:</strong></p>
+    <ol>
+      <li>Open <code>edge://extensions</code></li>
+      <li>Turn on <strong>Developer mode</strong> (toggle in the left sidebar)</li>
+      <li>Click <strong>Load unpacked</strong></li>
+      <li>Select the unzipped folder</li>
+    </ol>
+
+    <h3>3. That's it</h3>
+    <p>The converter's icon appears in your toolbar. From then on, downloading an .stl or .3mf from any
+      site (or a .zip from a 3D-model site) pops up a notification with a "Convert to STEP" button. You can
+      also click the toolbar icon any time to open the converter directly and drag a file in by hand.</p>
+
+    <div class="note">
+      Browsers show a "Developer mode" warning because unpacked extensions skip the store review process —
+      that's expected here, not a sign of anything wrong. This build is open source: you can read every line
+      before installing it, in the same
+      <a href="https://github.com/oneno23/stl-to-step-ipad" target="_blank" rel="noopener">public repository</a>
+      that powers this website. It asks for no account, sends nothing to any server, and works exactly like
+      the <a href="converter.html">web converter</a> — just with automatic download detection built in.
+    </div>
+  </div>
+
+  <a class="back" href="converter.html">&larr; Back to the converter</a>
+
+  <footer>STL/3MF to STEP Converter</footer>
+</div>
+</body>
+</html>
