@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STL/3MF → STEP (con suavizado seguro)</title>
+<title>STL/3MF → STEP (with safe smoothing)</title>
 <script src="jszip.min.js"></script>
 <style>
   :root {
@@ -166,41 +166,42 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Convertidor STL/3MF → STEP <span class="badge">100% en tu navegador</span></h1>
+  <h1>STL/3MF → STEP Converter <span class="badge">100% in your browser</span></h1>
   <p class="subtitle">
-    Convierte un STL o 3MF a un sólido STEP cerrado, con suavizado opcional sin arriesgar las medidas de la pieza.
+    Converts an STL or 3MF into a closed STEP solid, with optional smoothing that never risks the part's dimensions.
   </p>
 
   <div class="panel">
-    <label class="field">1. Archivo STL, 3MF o ZIP</label>
+    <label class="field">1. STL, 3MF or ZIP file</label>
     <div class="dropzone" id="dropzone">
       <div class="icon">📐</div>
-      <div>Arrastra un archivo .stl, .3mf o .zip aquí, o haz clic para elegirlo</div>
+      <div>Drag an .stl, .3mf or .zip file here, or click to choose one</div>
       <div class="fname" id="fname"></div>
       <input type="file" id="fileInput">
     </div>
     <div class="hint">
-      Los .zip se abren automáticamente para buscar el .stl/.3mf dentro.
+      ZIP files are opened automatically to look for the .stl/.3mf inside.
     </div>
   </div>
 
   <div class="panel" id="zipPickerPanel" style="display:none;">
-    <label class="field">Este ZIP contiene varios archivos — elige cuál convertir</label>
+    <label class="field">This ZIP contains several files — choose which one to convert</label>
     <div id="zipPickerList"></div>
   </div>
 
   <div class="panel">
-    <label class="field">2. Suavizado máximo permitido por vértice</label>
+    <label class="field">2. Maximum smoothing allowed per vertex</label>
     <div class="row">
       <input type="range" id="maxDisp" min="0" max="0.5" step="0.01" value="0.1">
       <div class="rangeval" id="maxDispVal">0.10 mm</div>
     </div>
     <div class="hint">
-      0 mm = sin suavizar. Un valor mayor suaviza sin mover ningún vértice más de esa distancia, protegiendo automáticamente bordes y zonas de encaje.
+      0 mm = no smoothing. A higher value smooths the mesh without moving any vertex further than that distance,
+      automatically protecting edges and tight-fit areas.
     </div>
   </div>
 
-  <button class="primary" id="convertBtn" style="display:none;">Convertir a STEP</button>
+  <button class="primary" id="convertBtn" style="display:none;">Convert to STEP</button>
 
   <div class="panel" id="progressPanel" style="display:none;">
     <div class="progress-outer"><div class="progress-inner" id="progressBar"></div></div>
@@ -209,29 +210,30 @@
 
   <div class="panel" id="resultsPanel" style="display:none;">
     <table class="stats" id="statsTable"></table>
-    <a href="#" class="download-btn" id="downloadBtn" download>⬇ Descargar STEP</a>
+    <a href="#" class="download-btn" id="downloadBtn" download>⬇ Download STEP</a>
   </div>
 
   <div class="panel" id="viewerPanel" style="display:none;">
-    <label class="field">Vista previa del resultado</label>
+    <label class="field">Result preview</label>
     <div class="viewer-toolbar">
       <div class="group">
-        <label><input type="radio" name="viewerData" value="smoothed" id="viewOptSmoothed" checked> Suavizado (exportado)</label>
+        <label><input type="radio" name="viewerData" value="smoothed" id="viewOptSmoothed" checked> Smoothed (exported)</label>
         <label><input type="radio" name="viewerData" value="original" id="viewOptOriginal"> Original</label>
       </div>
       <div class="group">
         <label><input type="checkbox" id="viewWireframe"> Wireframe</label>
-        <label><input type="checkbox" id="viewFlatShading" checked> Sombreado plano (facetas reales)</label>
+        <label><input type="checkbox" id="viewFlatShading" checked> Flat shading (real facets)</label>
       </div>
     </div>
     <div id="viewerCanvasWrap">
-      <div id="viewerLoading">Cargando visor 3D...</div>
+      <div id="viewerLoading">Loading 3D viewer...</div>
     </div>
-    <div class="viewer-hint">Arrastra para rotar, rueda para zoom, clic derecho para desplazar.</div>
+    <div class="viewer-hint">Drag to rotate, scroll to zoom, right-click to pan.</div>
   </div>
 
   <footer>
-    Modelos con muchos triángulos pueden tardar uno o dos minutos en convertirse. El soporte 3MF cubre piezas de un solo componente; ensamblajes multi-pieza complejos pueden no importarse completos.
+    Models with many triangles can take one or two minutes to convert.
+    3MF support covers single-part models; complex multi-part assemblies may not import completely.
   </footer>
 </div>
 
