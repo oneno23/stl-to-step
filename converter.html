@@ -164,6 +164,25 @@
   .zip-item .name { font-size: 13px; word-break: break-all; }
   .zip-item .size { font-size: 12px; color: var(--text-dim); font-family: var(--mono); white-space: nowrap; }
 
+.ext-promo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  text-decoration: none;
+  transition: border-color .15s, background .15s;
+}
+.ext-promo:hover { border-color: var(--accent); background: rgba(91,141,239,0.08); }
+.ext-promo-icon { font-size: 26px; line-height: 1; }
+.ext-promo-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ext-promo-text strong { color: var(--text); font-size: 14px; }
+.ext-promo-sub { color: var(--text-dim); font-size: 12px; }
+.ext-promo-arrow { color: var(--accent); font-size: 20px; }
+
 </style>
 </head>
 <body>
@@ -172,6 +191,15 @@
   <p class="subtitle">
     Converts an STL or 3MF into a closed STEP solid, with optional smoothing that never risks the part's dimensions.
   </p>
+
+  <a class="ext-promo" href="extension.html">
+    <span class="ext-promo-icon">🧩</span>
+    <span class="ext-promo-text">
+      <strong>Also available as a browser extension</strong>
+      <span class="ext-promo-sub">Install once — convert with one click straight from your downloads.</span>
+    </span>
+    <span class="ext-promo-arrow">→</span>
+  </a>
 
   <div class="panel">
     <label class="field">1. STL, 3MF or ZIP file</label>
