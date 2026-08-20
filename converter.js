@@ -754,6 +754,18 @@ convertBtn.addEventListener("click", async () => {
     const inlineSupportEl = document.getElementById("inlineSupport");
     if (inlineSupportEl) inlineSupportEl.style.display = "block";
 
+    fetch("/api/increment", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => {
+        const counterEl = document.getElementById("conversionCounter");
+        if (counterEl && typeof d.count === "number") {
+          counterEl.textContent = d.count.toLocaleString() + " files converted so far";
+        }
+      })
+      .catch(() => {
+        // Decorative counter only, never block or disrupt the conversion flow.
+      });
+
     viewerPanel.style.display = "block";
     if (!Viewer.isReady()) {
       viewerLoading.style.display = "none";
@@ -773,3 +785,18 @@ convertBtn.addEventListener("click", async () => {
     convertBtn.textContent = "Convert to STEP";
   }
 });
+
+
+// Conversion counter (footer): fetch the current total on page load and display it.
+(async () => {
+  try {
+    const res = await fetch("/api/count");
+    const data = await res.json();
+    const el = document.getElementById("conversionCounter");
+    if (el && typeof data.count === "number") {
+      el.textContent = data.count.toLocaleString() + " files converted so far";
+    }
+  } catch (e) {
+    // Decorative counter only, silently ignore failures.
+  }
+})();
