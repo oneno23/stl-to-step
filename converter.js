@@ -759,7 +759,7 @@ convertBtn.addEventListener("click", async () => {
       .then((d) => {
         const counterEl = document.getElementById("conversionCounter");
         if (counterEl && typeof d.count === "number") {
-          counterEl.textContent = d.count.toLocaleString() + " files converted so far";
+          counterEl.textContent = d.count === 1 ? "1 file converted so far" : d.count.toLocaleString() + " files converted so far";
         }
       })
       .catch(() => {
@@ -794,7 +794,7 @@ convertBtn.addEventListener("click", async () => {
     const data = await res.json();
     const el = document.getElementById("conversionCounter");
     if (el && typeof data.count === "number") {
-      el.textContent = data.count.toLocaleString() + " files converted so far";
+      el.textContent = data.count === 1 ? "1 file converted so far" : data.count.toLocaleString() + " files converted so far";
     }
   } catch (e) {
     // Decorative counter only, silently ignore failures.
