@@ -158,6 +158,33 @@
     </div>
   </div>
 
+  <div class="panel steps-panel">
+    <h3>Why isn't it in the Chrome Web Store or Edge Add-ons yet?</h3>
+    <p>Publishing to the official stores means creating a developer account with Google and Microsoft and going
+      through their review process, which takes time. Rather than make people wait, the extension ships as a
+      direct download in the meantime — the code you'd get from an official listing is exactly the code in this
+      .zip, just without the store's review badge. Store listings are on the roadmap for this project.</p>
+
+    <h3>What permissions does it ask for, and why?</h3>
+    <p>Chrome's extension permission screen will show two things when you load it, and both map directly to how
+      the extension works:</p>
+    <ul>
+      <li><strong><code>downloads</code></strong> — needed to notice when you download an <code>.stl</code> or
+        <code>.3mf</code> file, and to read that file's bytes so it can offer to convert it. This is the same API
+        every download-manager-style extension uses.</li>
+      <li><strong><code>notifications</code></strong> — used to show the "Convert to STEP" popup after a matching
+        download finishes.</li>
+      <li><strong>Access to all sites (<code>host_permissions</code>)</strong> — this looks broader than it is:
+        Chrome's Manifest V3 downloads API requires a matching host permission before an extension is allowed to
+        read a downloaded file's contents at all, regardless of which site it came from. The extension does not
+        read page content, track browsing, or run on pages you visit — it only ever touches a file after
+        <em>you've</em> chosen to download it.</li>
+    </ul>
+    <p>There's no analytics, no telemetry, and no network request in the extension's code — the actual STL/3MF
+      → STEP conversion runs with the same local, in-browser OpenCascade + WebAssembly engine as the web
+      converter, so a downloaded file never leaves your device.</p>
+  </div>
+
   <a class="back" href="converter.html">&larr; Back to the converter</a>
 
   <footer>STL/3MF to STEP Converter</footer>
