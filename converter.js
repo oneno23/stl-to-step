@@ -751,6 +751,8 @@ convertBtn.addEventListener("click", async () => {
       <tr><td>STEP file size</td><td>${(data.length/1024/1024).toFixed(1)} MB</td></tr>
     `;
     resultsPanel.style.display = "block";
+    const inlineSupportEl = document.getElementById("inlineSupport");
+    if (inlineSupportEl) inlineSupportEl.style.display = "block";
 
     viewerPanel.style.display = "block";
     if (!Viewer.isReady()) {
