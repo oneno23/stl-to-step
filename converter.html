@@ -208,6 +208,14 @@
   white-space: nowrap;
 }
 
+.inline-support {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.inline-support a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.inline-support a:hover { text-decoration: underline; }
+
 </style>
 </head>
 <body>
@@ -258,6 +266,7 @@
   <div class="panel" id="resultsPanel" style="display:none;">
     <table class="stats" id="statsTable"></table>
     <a href="#" class="download-btn" id="downloadBtn" download>⬇ Download STEP</a>
+    <div id="inlineSupport" class="inline-support" style="display:none;">Enjoying this? <a href="https://ko-fi.com/stltostep" target="_blank" rel="noopener">Support the project on Ko-fi →</a></div>
   </div>
 
   <div class="panel" id="viewerPanel" style="display:none;">
@@ -289,7 +298,7 @@
 
     <div class="support-panel">
       <span class="icon">☕</span>
-      <span class="text"><strong>Enjoying this tool?</strong> It's free and runs 100% locally in your browser — a tip helps keep it going.</span>
+      <span class="text"><strong>Enjoying this tool?</strong> It's free and runs 100% locally in your browser. Your support covers the domain and hosting costs.</span>
       <a class="support-btn" href="https://ko-fi.com/stltostep" target="_blank" rel="noopener">Support on Ko-fi</a>
     </div>
 
