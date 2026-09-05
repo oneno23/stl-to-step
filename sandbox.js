@@ -81,13 +81,27 @@ async function handleConvert(msg, respond) {
     log(`Building ${nFaces} faces...`);
     const sewing = new oc.BRepBuilderAPI_Sewing(1e-3, true, true, true, false);
     let built = 0;
+    // These three counters exist because, before this fix, a triangle that failed to become
+    // a valid OpenCASCADE face was silently dropped here with zero visibility: the old log
+    // line ("Faces ready: N.") just reported how many triangles were *attempted*, not how many
+    // actually made it into the surface. A real 234826-triangle model hit this -- most of its
+    // faces failed silently, sewing had almost nothing to work with, and the exported STEP
+    // came out at 10 KB while every log line still read as a normal success. Counting and
+    // reporting failures here is what would have caught that immediately instead of shipping
+    // a near-empty file that looked fine.
+    let addedCount = 0;
+    let polyFailCount = 0;
+    let faceFailCount = 0;
     for (let fi = 0; fi < nFaces; fi++) {
       const a = faces[fi * 3], b = faces[fi * 3 + 1], c = faces[fi * 3 + 2];
       const poly = new oc.BRepBuilderAPI_MakePolygon_1();
       poly.Add_1(gpPnts[a]); poly.Add_1(gpPnts[b]); poly.Add_1(gpPnts[c]); poly.Close();
       if (poly.IsDone()) {
         const faceMaker = new oc.BRepBuilderAPI_MakeFace_15(poly.Wire(), true);
-        if (faceMaker.IsDone()) sewing.Add(faceMaker.Face());
+        if (faceMaker.IsDone()) { sewing.Add(faceMaker.Face()); addedCount++; }
+        else faceFailCount++;
+      } else {
+        polyFailCount++;
       }
       built++;
       if (built % 1500 === 0) {
@@ -96,7 +110,16 @@ async function handleConvert(msg, respond) {
         await yieldFrame();
       }
     }
-    log(`Faces ready: ${built}.`);
+    const failedCount = polyFailCount + faceFailCount;
+    if (failedCount > 0) {
+      const failPct = ((failedCount / nFaces) * 100).toFixed(1);
+      log(
+        `Faces ready: ${addedCount}/${nFaces} added to the surface (${failedCount} triangle${failedCount === 1 ? "" : "s"} skipped, ~${failPct}% -- ${polyFailCount} invalid polygon, ${faceFailCount} invalid face; usually near-zero-area or duplicate-vertex triangles). Continuing with the rest of the mesh.`,
+        "warn"
+      );
+    } else {
+      log(`Faces ready: ${built}.`);
+    }
     progress(50);
     await yieldFrame();
 
@@ -122,19 +145,49 @@ async function handleConvert(msg, respond) {
     progress(75);
     await yieldFrame();
 
+    // Sewing can legitimately split into more than one separate shell -- most often because
+    // some faces above got skipped (a gap in the mesh disconnects what would otherwise be one
+    // continuous surface), occasionally because the mesh genuinely has more than one physical
+    // piece. The old code just took whichever shell TopExp_Explorer happened to return first
+    // and silently discarded every other one -- if that first shell was a small leftover
+    // fragment, the exported STEP was tiny even though "Closed solid built." still logged as
+    // a normal success. This now looks at every shell, keeps the largest (by face count), and
+    // says so out loud when anything got left out, instead of failing the whole conversion --
+    // a mesh that's 99% fine shouldn't be blocked over a handful of bad triangles.
     let shapeToWrite = sewed;
-    const explorer = new oc.TopExp_Explorer_2(sewed, oc.TopAbs_ShapeEnum.TopAbs_SHELL, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
-    if (explorer.More()) {
-      const shell = oc.TopoDS.Shell_1(explorer.Current());
-      const solidMaker = new oc.BRepBuilderAPI_MakeSolid_3(shell);
+    const shellExplorer = new oc.TopExp_Explorer_2(sewed, oc.TopAbs_ShapeEnum.TopAbs_SHELL, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    let shellCount = 0;
+    let bestShell = null;
+    let bestFaceCount = -1;
+    let totalFacesInShells = 0;
+    while (shellExplorer.More()) {
+      shellCount++;
+      const shell = oc.TopoDS.Shell_1(shellExplorer.Current());
+      let faceCountInShell = 0;
+      const faceExplorer = new oc.TopExp_Explorer_2(shell, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+      while (faceExplorer.More()) { faceCountInShell++; faceExplorer.Next(); }
+      totalFacesInShells += faceCountInShell;
+      if (faceCountInShell > bestFaceCount) { bestFaceCount = faceCountInShell; bestShell = shell; }
+      shellExplorer.Next();
+    }
+    if (shellCount === 0) {
+      log("No closed surface detected; exporting as-is.", "warn");
+    } else {
+      if (shellCount > 1) {
+        const keptPct = totalFacesInShells > 0 ? Math.round((100 * bestFaceCount) / totalFacesInShells) : 0;
+        log(
+          `The sewn surface split into ${shellCount} separate pieces instead of one -- keeping only the largest (${bestFaceCount} of ${totalFacesInShells} sewn faces, ~${keptPct}%). This usually happens when a gap from skipped/bad triangles disconnects part of the mesh. The smaller, discarded piece(s) are NOT in the exported STEP.`,
+          "warn"
+        );
+      }
+      const solidMaker = new oc.BRepBuilderAPI_MakeSolid_3(bestShell);
       if (solidMaker.IsDone()) {
         shapeToWrite = solidMaker.Solid();
         log("Closed solid built.", "ok");
       } else {
+        shapeToWrite = bestShell;
         log("Could not close as a solid; exporting as a sewn surface.", "warn");
       }
-    } else {
-      log("No closed surface detected; exporting as-is.", "warn");
     }
     progress(85);
     await yieldFrame();
