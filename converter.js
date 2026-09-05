@@ -606,6 +606,17 @@ function log(msg, cls) {
 function setProgress(pct) { progressBar.style.width = Math.max(0, Math.min(100, pct)) + "%"; }
 function yieldFrame() { return new Promise(r => setTimeout(r, 0)); }
 
+// Same empirical rate sandbox.js uses for its own "Sewing surface (estimated...)"
+// log line (~13.8 ms/face, measured on a real 22,944-triangle model) -- mirrored
+// here so we can warn *before* sending the mesh to the sandbox, not just after
+// it's already built every face. It's a rough guess, not a precise ETA: real
+// time depends on mesh shape, not just triangle count.
+function estimateSewSeconds(nFaces) { return Math.round(nFaces * 0.0138); }
+function formatDuration(totalSeconds) {
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  return `${Math.round(totalSeconds / 60)} min`;
+}
+
 // ---------------------------------------------------------------------
 // Sandbox bridge: the actual OpenCASCADE/WASM work runs inside
 // sandbox.html, a page declared under manifest.json's "sandbox.pages".
@@ -673,8 +684,43 @@ async function convertInSandbox(vertices, faces, { onLog, onProgress }) {
     flatFaces[i * 3 + 2] = faces[i][2];
   }
 
+  // The sandboxed iframe runs the whole OpenCASCADE/WASM conversion, including one long,
+  // fully synchronous "sewing" call that reports no progress until it's done. If that iframe
+  // silently dies mid-conversion (running out of the browser's memory is the usual cause on
+  // very dense meshes), no "done" or "error" message ever arrives, and without a watchdog this
+  // Promise -- and the whole UI -- would hang forever with the tab sitting at 0% CPU and no
+  // way to recover short of reloading the whole page. This ties a generous, size-scaled
+  // timeout to the same estimate shown to the user, and on timeout tears down the (presumed
+  // dead) sandbox iframe so the *next* attempt gets a fresh one instead of posting into a
+  // frame that will never answer.
+  const estSeconds = estimateSewSeconds(faces.length);
+  const timeoutMs = Math.max(3 * 60 * 1000, estSeconds * 1000 * 2.5);
+  const heartbeatMs = Math.min(5 * 60 * 1000, Math.max(45 * 1000, (estSeconds * 1000) / 8));
+  const startTime = performance.now();
+
   return new Promise((resolve, reject) => {
-    pendingRequests.set(requestId, { resolve, reject, onLog, onProgress });
+    const heartbeat = setInterval(() => {
+      const elapsedMin = Math.round((performance.now() - startTime) / 60000);
+      onLog(
+        `Still working... ~${elapsedMin} min elapsed (estimate was ~${formatDuration(estSeconds)}). The sewing step reports no progress until it finishes -- this is normal for dense meshes, the tab isn't frozen.`
+      );
+    }, heartbeatMs);
+
+    const timeoutId = setTimeout(() => {
+      pendingRequests.delete(requestId);
+      if (sandboxFrame && sandboxFrame.parentNode) sandboxFrame.parentNode.removeChild(sandboxFrame);
+      sandboxFrame = null;
+      sandboxReadyPromise = null;
+      reject(new Error(`TIMEOUT: no response from the conversion engine after ~${Math.round(timeoutMs / 60000)} min (estimate was ~${formatDuration(estSeconds)}).`));
+    }, timeoutMs);
+
+    const cleanup = () => { clearInterval(heartbeat); clearTimeout(timeoutId); };
+    pendingRequests.set(requestId, {
+      resolve: (v) => { cleanup(); resolve(v); },
+      reject: (e) => { cleanup(); reject(e); },
+      onLog,
+      onProgress,
+    });
     sandboxFrame.contentWindow.postMessage(
       { type: "convert", requestId, vertices: flatVerts, faces: flatFaces },
       "*",
@@ -701,11 +747,12 @@ convertBtn.addEventListener("click", async () => {
     const rawTris = isThreeMF ? await parse3MF(buf) : parseSTL(buf);
     const { vertices, faces } = buildMesh(rawTris);
     log(`Mesh: ${vertices.length} vertices, ${faces.length} triangles.`);
+    const estSecondsPreflight = estimateSewSeconds(faces.length);
     const VERY_LARGE_FACE_THRESHOLD = 300000;
     if (faces.length > VERY_LARGE_FACE_THRESHOLD) {
       const proceed = confirm(
         `This model has ${faces.length.toLocaleString()} triangles — extremely dense.\n\n` +
-        `Meshes this large usually exhaust the browser's memory during the "sewing" step and the conversion fails after a long wait, rather than completing.\n\n` +
+        `The "sewing" step alone is estimated at around ${formatDuration(estSecondsPreflight)} (rough guess -- real mesh shape can move this a lot), and meshes this large often exhaust the browser's memory during that step and fail after the long wait instead of completing, sometimes without even showing an error.\n\n` +
         `Recommended: cancel and simplify/decimate the mesh first (in your slicer, Meshmixer, Blender's Decimate modifier, etc.) down to a few hundred thousand triangles or fewer, then convert again.\n\n` +
         `Try anyway?`
       );
@@ -713,11 +760,11 @@ convertBtn.addEventListener("click", async () => {
         log(`Cancelled: ${faces.length.toLocaleString()} triangles is above the safe threshold (${VERY_LARGE_FACE_THRESHOLD.toLocaleString()}). Simplify the mesh and try again.`, "warn");
         return;
       }
-      log(`Continuing with an extremely dense mesh (${faces.length.toLocaleString()} triangles) at the user's request — this may take a very long time and may still fail due to memory limits.`, "warn");
+      log(`Continuing with an extremely dense mesh (${faces.length.toLocaleString()} triangles, estimated ~${formatDuration(estSecondsPreflight)} for sewing alone) at the user's request — this may take a very long time and may still fail due to memory limits.`, "warn");
     } else if (faces.length > 20000) {
-      log(`Large model (${faces.length.toLocaleString()} triangles): converting to STEP can take several minutes, especially the "sewing" step. Don't close this tab even if it looks stuck.`, "warn");
+      log(`Large model (${faces.length.toLocaleString()} triangles): converting to STEP is estimated at around ${formatDuration(estSecondsPreflight)}, mostly spent in the "sewing" step, which reports no progress at all while it runs -- a long silence here is normal, not a sign the tab is stuck. Don't close this tab. If your system's task manager still shows 0% CPU for this tab after roughly double that estimate, it likely crashed silently; reload the page and try again with a simpler mesh.`, "warn");
     } else if (faces.length > 8000) {
-      log(`Medium-sized model (${faces.length.toLocaleString()} triangles): conversion may take one or two minutes.`, "warn");
+      log(`Medium-sized model (${faces.length.toLocaleString()} triangles): conversion is estimated at around ${formatDuration(estSecondsPreflight)}.`, "warn");
     }
     const orig = meshVolumeAndBBox(vertices, faces);
 
@@ -795,7 +842,14 @@ convertBtn.addEventListener("click", async () => {
     const rawMsg = err && err.stack ? err.stack : (err && err.message ? err.message : String(err));
     const bareMessage = (err && err.message != null) ? String(err.message) : String(err);
     const looksLikeEngineAbort = /^\d+$/.test(bareMessage.trim());
-    if (looksLikeEngineAbort) {
+    const looksLikeTimeout = /^TIMEOUT:/.test(bareMessage.trim());
+    if (looksLikeTimeout) {
+      log(
+        `ERROR: ${bareMessage} The conversion tab most likely ran out of memory and crashed silently while processing this mesh -- this can happen even below the "extremely dense" warning threshold. ` +
+        `You can try converting again in this same tab (a fresh conversion engine will start automatically); if that doesn't work, reload the page. Consider simplifying/decimating the mesh to fewer triangles first.`,
+        "warn"
+      );
+    } else if (looksLikeEngineAbort) {
       log(
         `ERROR: The conversion engine crashed internally (raw code: ${bareMessage}). ` +
         `This is not a normal error message — it almost always means the browser ran out of memory while processing the mesh, usually because the model is extremely dense. ` +
