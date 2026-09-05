@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About this project — STL/3MF to STEP Converter</title>
+<meta name="description" content="Why this STL/3MF to STEP converter exists, how the conversion works technically (OpenCascade + WebAssembly), and the philosophy behind keeping it free and local-only.">
+<link rel="canonical" href="https://stltostep.app/about.html">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stltostep.app/about.html">
+<meta property="og:title" content="About this project — STL/3MF to STEP Converter">
+<meta property="og:description" content="Why this STL/3MF to STEP converter exists, and how the conversion works technically.">
+<meta property="og:image" content="https://stltostep.app/ogimage.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="About this project — STL/3MF to STEP Converter">
+<meta name="twitter:description" content="Why this STL/3MF to STEP converter exists, and how the conversion works technically.">
+<meta name="twitter:image" content="https://stltostep.app/ogimage.png">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-border: #262b36;
+    --text: #e8eaed;
+    --text-dim: #9aa2b1;
+    --accent: #5b8def;
+    --accent-dim: #2c3f66;
+    --ok: #4caf7d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 32px 16px 64px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin: 0 0 28px; max-width: 60ch; }
+  h2 { font-size: 16px; margin: 0 0 4px; }
+  h3 { font-size: 14px; margin: 20px 0 8px; color: var(--text); }
+  p, li { color: var(--text); font-size: 14px; }
+  ol, ul { margin: 8px 0; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 22px 22px 24px;
+    margin-bottom: 16px;
+  }
+  .back-top { display: inline-block; margin: 0 0 16px; font-size: 14px; }
+  .back { display: inline-block; margin-top: 24px; font-size: 14px; }
+  footer { color: var(--text-dim); font-size: 12px; text-align: center; margin-top: 32px; }
+  code {
+    background: rgba(91,141,239,0.12);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .note {
+    font-size: 13px;
+    color: var(--text-dim);
+    background: rgba(91,141,239,0.06);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 20px;
+  }
+  .guides-list { list-style: none; padding: 0; margin: 8px 0 0; }
+  .guides-list li { margin-bottom: 10px; }
+  .guides-list a { font-weight: 600; }
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"AboutPage","name":"About STL/3MF to STEP Converter","url":"https://stltostep.app/about.html","description":"Why this STL/3MF to STEP converter exists, and how the conversion works technically."}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-top" href="converter.html">&larr; Back to the converter</a>
+  <h1>About this project</h1>
+  <p class="subtitle">
+    Why this tool exists, how it actually works under the hood, and what "free" means here.
+  </p>
+
+  <div class="panel">
+    <h3>Where it started</h3>
+    <p>
+      This converter started as a personal workaround, not a product idea. The original need was simple:
+      editing 3D models on an iPad using Shapr3D, without a desktop computer nearby. Plenty of useful STL
+      and 3MF files exist — downloaded from model-sharing sites, exported from a 3D scan, or handed over
+      by someone else — but a mesh isn't something Shapr3D (or Fusion 360, SolidWorks, Onshape, and most
+      other CAD tools) can meaningfully edit. What those tools want is a STEP file: a solid with real
+      faces and edges, not a pile of triangles.
+    </p>
+    <p>
+      At the time, doing that conversion meant either paying for desktop CAD software with STL-to-solid
+      import features, or routing files through a third-party web service that required an account and an
+      upload of the file to someone else's server — often for a "free" tier that expired or watermarked
+      the result. Neither fit a workflow that was supposed to happen from an iPad, on the go, without
+      typing a credit card number into a conversion website. So this became a small side project instead:
+      a converter that runs entirely inside the browser, with no upload step at all, published for free
+      because the same problem is common enough that it seemed worth sharing rather than keeping private.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h3>How the conversion actually works</h3>
+    <p>
+      The core of the tool is <strong>OpenCascade</strong>, an open-source CAD kernel that professional CAD
+      software uses internally to represent and manipulate solid geometry (the same category of software
+      as ACIS or Parasolid, if you've heard of those). OpenCascade is normally a native C++ library — this
+      project uses a build of it compiled to <strong>WebAssembly</strong>, so it runs directly inside your
+      browser's JavaScript engine at close to native speed, without needing a plugin, a server, or an
+      installer.
+    </p>
+    <p>
+      When you drop in an STL or 3MF file, the browser reads its triangle mesh, optionally applies the
+      smoothing step described in the
+      <a href="guides/safe-smoothing-explained.html">safe smoothing guide</a>, and then asks OpenCascade to
+      stitch that mesh into a closed BREP solid — the boundary-representation format that STEP files store.
+      That solid is what gets written out as a <code>.step</code> file. Separately, <strong>Three.js</strong>
+      handles the 3D preview you see after conversion, rendering the result directly from the same
+      in-memory geometry so you can check it before downloading — no round trip to a server involved there
+      either.
+    </p>
+    <p>
+      Because every step happens on your own device, the file never leaves it. You could disconnect from
+      the internet right after the page finishes loading and the conversion would still work — there's
+      nothing left to fetch.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h3>Why it's free, and what "free" means here</h3>
+    <p>
+      There's no server-side processing cost to recoup, since your device does the actual conversion work —
+      the site only needs to serve the page and the WebAssembly files once, which is cheap. The site is
+      supported by ads and by optional
+      <a href="https://ko-fi.com/stltostep" target="_blank" rel="noopener">donations on Ko-fi</a>, not by a
+      paid tier, a file-size limit, or a watermark on the output. The
+      <a href="https://github.com/oneno23/stl-to-step" target="_blank" rel="noopener">source code is public</a>,
+      including the <a href="extension.html">browser extension</a> version, so anyone who wants to verify what
+      actually happens to their file — or run their own copy — can.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h3>Further reading</h3>
+    <p>Guides that go deeper into specific parts of this workflow:</p>
+    <ul class="guides-list">
+      <li><a href="guides/stl-vs-step.html">STL vs. STEP: what's actually different, and when you need each</a></li>
+      <li><a href="guides/prepare-a-download-for-cad.html">How to prepare a downloaded or scanned model for CAD editing</a></li>
+      <li><a href="guides/safe-smoothing-explained.html">What "safe smoothing" does, and why it won't ruin your dimensions</a></li>
+    </ul>
+  </div>
+
+  <a class="back" href="converter.html">&larr; Back to the converter</a>
+
+  <footer>STL/3MF to STEP Converter</footer>
+</div>
+</body>
+</html>

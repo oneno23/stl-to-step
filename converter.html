@@ -346,7 +346,7 @@
   </details>
   <details>
     <summary>Why can't I just import my STL file directly into my CAD software?</summary>
-    <p>Most CAD programs can import STL files, but only as a mesh body that's hard to edit — you can't easily change dimensions, add features, or combine it with other parts. Converting to STEP turns the mesh into a solid body that behaves like native CAD geometry.</p>
+    <p>Most CAD programs can import STL files, but only as a mesh body that's hard to edit — you can't easily change dimensions, add features, or combine it with other parts. Converting to STEP turns the mesh into a solid body that behaves like native CAD geometry. See the <a href="guides/stl-vs-step.html">STL vs. STEP guide</a> for the full explanation.</p>
   </details>
   <details>
     <summary>Is it safe? Does my file get uploaded to a server?</summary>
@@ -354,7 +354,7 @@
   </details>
   <details>
     <summary>What does safe smoothing mean? Will it change my model's dimensions?</summary>
-    <p>Smoothing merges nearly-coplanar triangles into cleaner flat faces to reduce file complexity, but it never moves vertices beyond the tolerance you choose, so your part's outer dimensions stay accurate. You can disable it entirely if you need a 1:1 mesh-to-solid conversion.</p>
+    <p>Smoothing merges nearly-coplanar triangles into cleaner flat faces to reduce file complexity, but it never moves vertices beyond the tolerance you choose, so your part's outer dimensions stay accurate. You can disable it entirely if you need a 1:1 mesh-to-solid conversion. The <a href="guides/safe-smoothing-explained.html">smoothing guide</a> goes through how to pick a tolerance.</p>
   </details>
   <details>
     <summary>Which file formats are supported?</summary>
@@ -374,10 +374,21 @@
   </details>
 </section>
 
+<div class="panel">
+  <h2 style="margin-top:0;">Learn more</h2>
+  <p>
+    <a href="about.html">About this project</a> — why it exists and how the OpenCascade + WebAssembly
+    conversion actually works.
+  </p>
+  <p><a href="guides/stl-vs-step.html">STL vs. STEP: what's actually different, and when you need each</a></p>
+  <p><a href="guides/prepare-a-download-for-cad.html">How to prepare a downloaded or scanned model for CAD editing</a></p>
+  <p><a href="guides/safe-smoothing-explained.html">What "safe smoothing" does, and why it won't ruin your dimensions</a></p>
+</div>
+
 <footer>
     Models with many triangles can take one or two minutes to convert.
     3MF support covers single-part models; complex multi-part assemblies may not import completely.
-    <br><a href="privacy.html">Privacy Policy</a>
+    <br><a href="about.html">About</a> · <a href="privacy.html">Privacy Policy</a>
     <br><span id="conversionCounter"></span>
   </footer>
 </div>
