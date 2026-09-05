@@ -165,6 +165,14 @@
     display: flex; align-items: center; justify-content: center;
     color: var(--text-dim); font-size: 13px;
   }
+  #viewerTooLarge {
+    font-size: 13px;
+    color: var(--text-dim);
+    background: rgba(91,141,239,0.06);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
   .zip-item {
     display: flex;
     align-items: center;
@@ -307,7 +315,7 @@
 
   <div class="panel" id="viewerPanel" style="display:none;">
     <label class="field">Result preview</label>
-    <div class="viewer-toolbar">
+    <div class="viewer-toolbar" id="viewerToolbar">
       <div class="group">
         <label><input type="radio" name="viewerData" value="smoothed" id="viewOptSmoothed" checked> Smoothed (exported)</label>
         <label><input type="radio" name="viewerData" value="original" id="viewOptOriginal"> Original</label>
@@ -320,7 +328,10 @@
     <div id="viewerCanvasWrap">
       <div id="viewerLoading">Loading 3D viewer...</div>
     </div>
-    <div class="viewer-hint">Drag to rotate, scroll to zoom, right-click to pan.</div>
+    <div class="viewer-hint" id="viewerHint">Drag to rotate, scroll to zoom, right-click to pan.</div>
+    <div id="viewerTooLarge" style="display:none;">
+      This model is too dense to preview interactively in the browser (rendering it live can freeze the tab). Your STEP file is already generated and ready to download above -- this only skips the 3D preview, nothing else.
+    </div>
   </div>
 
     <a class="ext-promo" href="extension.html">

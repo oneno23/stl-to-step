@@ -480,8 +480,11 @@ const resultsPanel = document.getElementById("resultsPanel");
 const statsTable = document.getElementById("statsTable");
 const downloadBtn = document.getElementById("downloadBtn");
 const viewerPanel = document.getElementById("viewerPanel");
+const viewerToolbar = document.getElementById("viewerToolbar");
 const viewerCanvasWrap = document.getElementById("viewerCanvasWrap");
 const viewerLoading = document.getElementById("viewerLoading");
+const viewerHint = document.getElementById("viewerHint");
+const viewerTooLarge = document.getElementById("viewerTooLarge");
 const viewOptSmoothed = document.getElementById("viewOptSmoothed");
 const viewOptOriginal = document.getElementById("viewOptOriginal");
 const viewWireframe = document.getElementById("viewWireframe");
@@ -616,6 +619,17 @@ function formatDuration(totalSeconds) {
   if (totalSeconds < 60) return `${totalSeconds}s`;
   return `${Math.round(totalSeconds / 60)} min`;
 }
+
+// Building the interactive Three.js preview (two full position buffers, per-vertex
+// normals, a live WebGL render loop) is separate work from the OpenCASCADE/WASM
+// conversion, running on the *parent* page's own main thread -- not covered by the
+// sandbox watchdog above. On a real 290,076-triangle model the conversion itself
+// finished fine (confirmed via OpenCASCADE's own console output: the STEP file was
+// written successfully), but the tab still became unresponsive for a long stretch
+// afterward, consistent with this preview-building step being the actual bottleneck
+// at that size, not the conversion. Skipping the interactive preview above this
+// threshold avoids that second failure mode; the STEP file itself is unaffected.
+const VIEWER_MAX_FACES = 150000;
 
 // ---------------------------------------------------------------------
 // Sandbox bridge: the actual OpenCASCADE/WASM work runs inside
@@ -827,16 +841,29 @@ convertBtn.addEventListener("click", async () => {
       });
 
     viewerPanel.style.display = "block";
-    if (!Viewer.isReady()) {
-      viewerLoading.style.display = "none";
-      Viewer.init(viewerCanvasWrap);
+    if (faces.length > VIEWER_MAX_FACES) {
+      // Too dense to preview safely -- skip building/rendering it entirely. The STEP
+      // file above is already generated and downloadable regardless of this.
+      viewerToolbar.style.display = "none";
+      viewerCanvasWrap.style.display = "none";
+      viewerHint.style.display = "none";
+      viewerTooLarge.style.display = "block";
+    } else {
+      viewerToolbar.style.display = "";
+      viewerCanvasWrap.style.display = "";
+      viewerHint.style.display = "";
+      viewerTooLarge.style.display = "none";
+      if (!Viewer.isReady()) {
+        viewerLoading.style.display = "none";
+        Viewer.init(viewerCanvasWrap);
+      }
+      Viewer.setData(faces, vertices, smoothed);
+      viewOptSmoothed.checked = maxDisp > 0;
+      viewOptOriginal.checked = maxDisp === 0;
+      Viewer.showDataset(maxDisp > 0 ? "smoothed" : "original");
+      Viewer.setWireframeVisible(viewWireframe.checked);
+      Viewer.setFlatShading(viewFlatShading.checked);
     }
-    Viewer.setData(faces, vertices, smoothed);
-    viewOptSmoothed.checked = maxDisp > 0;
-    viewOptOriginal.checked = maxDisp === 0;
-    Viewer.showDataset(maxDisp > 0 ? "smoothed" : "original");
-    Viewer.setWireframeVisible(viewWireframe.checked);
-    Viewer.setFlatShading(viewFlatShading.checked);
   } catch (err) {
     console.error(err);
     const rawMsg = err && err.stack ? err.stack : (err && err.message ? err.message : String(err));
