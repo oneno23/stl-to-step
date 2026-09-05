@@ -700,11 +700,24 @@ convertBtn.addEventListener("click", async () => {
     const buf = await pendingFile.getBuffer();
     const rawTris = isThreeMF ? await parse3MF(buf) : parseSTL(buf);
     const { vertices, faces } = buildMesh(rawTris);
-    log(`Malla: ${vertices.length} vertices, ${faces.length} triangulos.`);
-    if (faces.length > 20000) {
-      log(`Modelo grande (${faces.length} triángulos): la conversión a STEP puede tardar varios minutos, sobre todo el paso de "coser" la superficie. No cierres esta pestaña aunque parezca detenido.`, "warn");
+    log(`Mesh: ${vertices.length} vertices, ${faces.length} triangles.`);
+    const VERY_LARGE_FACE_THRESHOLD = 300000;
+    if (faces.length > VERY_LARGE_FACE_THRESHOLD) {
+      const proceed = confirm(
+        `This model has ${faces.length.toLocaleString()} triangles — extremely dense.\n\n` +
+        `Meshes this large usually exhaust the browser's memory during the "sewing" step and the conversion fails after a long wait, rather than completing.\n\n` +
+        `Recommended: cancel and simplify/decimate the mesh first (in your slicer, Meshmixer, Blender's Decimate modifier, etc.) down to a few hundred thousand triangles or fewer, then convert again.\n\n` +
+        `Try anyway?`
+      );
+      if (!proceed) {
+        log(`Cancelled: ${faces.length.toLocaleString()} triangles is above the safe threshold (${VERY_LARGE_FACE_THRESHOLD.toLocaleString()}). Simplify the mesh and try again.`, "warn");
+        return;
+      }
+      log(`Continuing with an extremely dense mesh (${faces.length.toLocaleString()} triangles) at the user's request — this may take a very long time and may still fail due to memory limits.`, "warn");
+    } else if (faces.length > 20000) {
+      log(`Large model (${faces.length.toLocaleString()} triangles): converting to STEP can take several minutes, especially the "sewing" step. Don't close this tab even if it looks stuck.`, "warn");
     } else if (faces.length > 8000) {
-      log(`Modelo de tamaño medio (${faces.length} triángulos): la conversión puede tardar uno o dos minutos.`, "warn");
+      log(`Medium-sized model (${faces.length.toLocaleString()} triangles): conversion may take one or two minutes.`, "warn");
     }
     const orig = meshVolumeAndBBox(vertices, faces);
 
@@ -715,7 +728,7 @@ convertBtn.addEventListener("click", async () => {
 
     let smoothed = vertices, stats = { maxDisp: 0, meanDisp: 0, clampedCount: 0 };
     if (maxDisp > 0) {
-      log(`Suavizando (limite ${maxDisp.toFixed(2)} mm, ${frozenCount} vertices protegidos de ${vertices.length})...`);
+      log(`Smoothing (limit ${maxDisp.toFixed(2)} mm, ${frozenCount} of ${vertices.length} vertices protected)...`);
       const r = smoothMesh(vertices, adjacency, frozen, { lambda: 0.25, iterations: 30, maxDisp });
       smoothed = r.vertices; stats = r.stats;
     } else {
@@ -779,7 +792,19 @@ convertBtn.addEventListener("click", async () => {
     Viewer.setFlatShading(viewFlatShading.checked);
   } catch (err) {
     console.error(err);
-    log("ERROR: " + (err && err.stack ? err.stack : (err && err.message ? err.message : String(err))), "warn");
+    const rawMsg = err && err.stack ? err.stack : (err && err.message ? err.message : String(err));
+    const bareMessage = (err && err.message != null) ? String(err.message) : String(err);
+    const looksLikeEngineAbort = /^\d+$/.test(bareMessage.trim());
+    if (looksLikeEngineAbort) {
+      log(
+        `ERROR: The conversion engine crashed internally (raw code: ${bareMessage}). ` +
+        `This is not a normal error message — it almost always means the browser ran out of memory while processing the mesh, usually because the model is extremely dense. ` +
+        `Try simplifying/decimating the mesh to far fewer triangles (a few hundred thousand or less) and convert again.`,
+        "warn"
+      );
+    } else {
+      log("ERROR: " + rawMsg, "warn");
+    }
   } finally {
     convertBtn.disabled = false;
     convertBtn.textContent = "Convert to STEP";
