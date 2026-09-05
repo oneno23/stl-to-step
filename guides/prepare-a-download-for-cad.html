@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preparing a downloaded or scanned model for CAD editing — STL/3MF to STEP Converter</title>
+<meta name="description" content="A practical workflow for turning a downloaded model file or a 3D scan into something you can actually edit in Fusion 360, Shapr3D, SolidWorks, or Onshape.">
+<link rel="canonical" href="https://stltostep.app/guides/prepare-a-download-for-cad.html">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://stltostep.app/guides/prepare-a-download-for-cad.html">
+<meta property="og:title" content="Preparing a downloaded or scanned model for CAD editing">
+<meta property="og:description" content="A practical workflow for turning a downloaded model or a 3D scan into something you can actually edit in CAD.">
+<meta property="og:image" content="https://stltostep.app/ogimage.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Preparing a downloaded or scanned model for CAD editing">
+<meta name="twitter:description" content="A practical workflow for turning a downloaded model or a 3D scan into something you can actually edit in CAD.">
+<meta name="twitter:image" content="https://stltostep.app/ogimage.png">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-border: #262b36;
+    --text: #e8eaed;
+    --text-dim: #9aa2b1;
+    --accent: #5b8def;
+    --accent-dim: #2c3f66;
+    --ok: #4caf7d;
+    --warn: #e0a94c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 32px 16px 64px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin: 0 0 28px; max-width: 60ch; }
+  h2 { font-size: 17px; margin: 28px 0 8px; color: var(--text); }
+  h3 { font-size: 14px; margin: 18px 0 6px; color: var(--text); }
+  p, li { color: var(--text); font-size: 14px; }
+  ol, ul { margin: 8px 0; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 22px 22px 24px;
+    margin-bottom: 16px;
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  .back-top { display: inline-block; margin: 0 0 16px; font-size: 14px; }
+  .back { display: inline-block; margin-top: 24px; font-size: 14px; }
+  footer { color: var(--text-dim); font-size: 12px; text-align: center; margin-top: 32px; }
+  code {
+    background: rgba(91,141,239,0.12);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .note {
+    font-size: 13px;
+    color: var(--text-dim);
+    background: rgba(91,141,239,0.06);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+  }
+  .warn-note {
+    font-size: 13px;
+    color: var(--text);
+    background: rgba(224,169,76,0.08);
+    border: 1px solid #4a3d24;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+  }
+  .cta {
+    display: block;
+    text-align: center;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 13px;
+    border-radius: 8px;
+    margin: 20px 0 6px;
+  }
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"HowTo","name":"How to prepare a downloaded or scanned model for CAD editing","description":"A practical workflow for turning a downloaded model or a 3D scan into something you can edit in CAD software.","step":[{"@type":"HowToStep","name":"Check the mesh is watertight","text":"Confirm the STL/3MF has no holes or self-intersections before converting."},{"@type":"HowToStep","name":"Convert to STEP","text":"Run the file through an STL/3MF to STEP converter."},{"@type":"HowToStep","name":"Import into CAD","text":"Open the resulting STEP file as a solid body in your CAD software."},{"@type":"HowToStep","name":"Edit the base solid","text":"Add features, cut, extrude, or fillet on top of the imported solid."}]}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-top" href="../converter.html">&larr; Back to the converter</a>
+  <h1>How to prepare a downloaded or scanned model for CAD editing</h1>
+  <p class="subtitle">
+    A practical, honest walkthrough — including what this process can't fix.
+  </p>
+
+  <div class="panel">
+    <p>
+      A common situation: you've found a model on MakerWorld, Printables, or Thingiverse — or you've
+      scanned a broken part with a phone or a handheld 3D scanner — and now you want to modify it. Add a
+      mounting hole, thicken a wall, combine it with a bracket you're designing, or just get an accurate
+      measurement. The file you have is an STL or 3MF mesh, and dropping that directly into Fusion 360,
+      Shapr3D, SolidWorks, or Onshape gets you a mesh body that barely responds to any of the usual CAD
+      tools (see the <a href="stl-vs-step.html">STL vs. STEP guide</a> for why). Here's the workflow that
+      actually works.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2 style="margin-top:0;"><span class="step-num">1</span>Check the mesh before converting</h2>
+    <p>
+      Mesh-to-solid conversion needs a <strong>watertight</strong> (or "manifold") mesh: every triangle
+      edge shared by exactly two triangles, with no gaps, no self-intersections, and no stray floating
+      faces. Most models from mainstream marketplaces are fine, since slicers require watertight meshes
+      too. Scans are the more common problem case — a phone-based or structured-light scan often has small
+      holes where the scanner couldn't see a surface (the bottom of an object resting on a table, for
+      example), or noisy self-intersecting geometry in areas with fine detail.
+    </p>
+    <div class="warn-note">
+      This converter does not repair broken meshes — it expects a valid, closed mesh and converts it to a
+      solid faithfully, including any holes or intersections that were already there. If your source is a
+      scan and the conversion fails or the resulting solid looks wrong in the 3D preview, running the mesh
+      through a dedicated repair tool first (many slicers include a basic "fix mesh" option, and standalone
+      mesh-repair tools exist for more serious cases) will usually solve it.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="step-num">2</span>Convert to STEP</h2>
+    <p>
+      Run the file through the <a href="../converter.html">converter</a>: drag in the STL, 3MF, or a ZIP
+      containing one of them, choose a smoothing amount (0&nbsp;mm keeps every original triangle as its own
+      tiny face; a small value like 0.1&nbsp;mm cleans up scan noise — see the
+      <a href="safe-smoothing-explained.html">smoothing guide</a> for how to choose), and download the
+      resulting <code>.step</code> file. The 3D preview lets you spot an obviously broken conversion — a
+      caved-in face, a missing chunk — before you leave the page.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2><span class="step-num">3</span>Import into your CAD software</h2>
+    <p>
+      STEP is a first-class import format in essentially every mainstream CAD tool. In Fusion 360 and
+      Shapr3D it typically appears directly as a solid body you can select, measure, and add features to;
+      SolidWorks and Onshape behave the same way. You won't get the original designer's sketch history or
+      parametric features back — a STEP import is a "dumb solid," meaning its shape is fixed but its
+      construction history isn't stored — but you get real, editable geometry: faces you can extrude from,
+      edges you can fillet, and dimensions you can trust.
+    </p>
+    <div class="note">
+      Practical tip: most CAD tools let you use an imported STEP body as the base for a Boolean operation
+      (cut, combine, intersect) against new sketches or other bodies. That's usually the fastest way to
+      "edit" an imported part — model the change you want as a new feature, then cut or join it against the
+      imported solid, rather than trying to reshape the imported faces directly.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2><span class="step-num">4</span>Know the real limitations</h2>
+    <ul>
+      <li><strong>Multi-part 3MF assemblies:</strong> 3MF can bundle several separate objects into one file
+        (a multi-color print, for example). This converter targets single-part conversion; complex
+        multi-part assemblies may not import completely — check the 3D preview before relying on the
+        result.</li>
+      <li><strong>Curved surfaces stay faceted unless smoothed:</strong> without smoothing, a converted
+        cylinder is still technically a many-sided polygon extrusion, just now stored as real CAD faces
+        instead of mesh triangles. It behaves like a solid, but it isn't a mathematically perfect cylinder.
+        For most editing and measuring purposes this doesn't matter; for high-precision mechanical fits, it
+        can.</li>
+      <li><strong>No feature history:</strong> as mentioned above, you get the shape, not the steps that
+        created it. If you need a fully parametric redesign rather than "a solid I can cut and extrude
+        against," this workflow gets you most of the way but not all of it.</li>
+    </ul>
+  </div>
+
+  <a class="cta" href="../converter.html">Start converting →</a>
+
+  <a class="back" href="../converter.html">&larr; Back to the converter</a>
+
+  <footer>STL/3MF to STEP Converter — <a href="../about.html">About this project</a></footer>
+</div>
+</body>
+</html>

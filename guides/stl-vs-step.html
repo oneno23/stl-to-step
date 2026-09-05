@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STL vs. STEP: what's the real difference? — STL/3MF to STEP Converter</title>
+<meta name="description" content="STL, 3MF, and STEP explained: mesh vs. solid geometry, what each format can and can't represent, and when you actually need to convert between them.">
+<link rel="canonical" href="https://stltostep.app/guides/stl-vs-step.html">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://stltostep.app/guides/stl-vs-step.html">
+<meta property="og:title" content="STL vs. STEP: what's the real difference?">
+<meta property="og:description" content="Mesh vs. solid geometry explained, and when you actually need to convert between them.">
+<meta property="og:image" content="https://stltostep.app/ogimage.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="STL vs. STEP: what's the real difference?">
+<meta name="twitter:description" content="Mesh vs. solid geometry explained, and when you actually need to convert between them.">
+<meta name="twitter:image" content="https://stltostep.app/ogimage.png">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-border: #262b36;
+    --text: #e8eaed;
+    --text-dim: #9aa2b1;
+    --accent: #5b8def;
+    --accent-dim: #2c3f66;
+    --ok: #4caf7d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 32px 16px 64px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin: 0 0 28px; max-width: 60ch; }
+  h2 { font-size: 17px; margin: 28px 0 8px; color: var(--text); }
+  h3 { font-size: 14px; margin: 18px 0 6px; color: var(--text); }
+  p, li { color: var(--text); font-size: 14px; }
+  ol, ul { margin: 8px 0; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 14px 0 20px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--panel-border); }
+  th { color: var(--text-dim); font-weight: 600; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 22px 22px 24px;
+    margin-bottom: 16px;
+  }
+  .back-top { display: inline-block; margin: 0 0 16px; font-size: 14px; }
+  .back { display: inline-block; margin-top: 24px; font-size: 14px; }
+  footer { color: var(--text-dim); font-size: 12px; text-align: center; margin-top: 32px; }
+  code {
+    background: rgba(91,141,239,0.12);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .cta {
+    display: block;
+    text-align: center;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 13px;
+    border-radius: 8px;
+    margin: 20px 0 6px;
+  }
+  .updated { color: var(--text-dim); font-size: 12px; margin-bottom: 24px; }
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"STL vs. STEP: what's the real difference?","description":"Mesh vs. solid geometry explained, and when you actually need to convert between them.","url":"https://stltostep.app/guides/stl-vs-step.html"}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-top" href="../converter.html">&larr; Back to the converter</a>
+  <h1>STL vs. STEP: what's actually different, and when you need each</h1>
+  <p class="subtitle">
+    Two file formats that both describe "a 3D shape," built on completely different ideas of what a shape is.
+  </p>
+
+  <div class="panel">
+    <h2 style="margin-top:0;">The short version</h2>
+    <p>
+      An STL (or 3MF) file describes a shape as a <strong>mesh</strong>: a big list of flat triangles glued
+      edge-to-edge, approximating a surface. A STEP file describes a shape as a <strong>solid</strong>: exact
+      mathematical surfaces (planes, cylinders, curved patches) with real edges and faces, the same
+      representation CAD software uses internally. A mesh is a photograph of a shape; a STEP solid is a
+      description of it.
+    </p>
+  </div>
+
+  <h2>Why a mesh is hard to edit</h2>
+  <p>
+    Every curved surface in an STL file is faked with flat triangles — a cylinder is really a many-sided
+    polygon pretending to be round. There's no concept of "this is a hole," "this is a fillet," or "these
+    two faces meet at 90°" anywhere in the file; it's just coordinates and triangle connectivity. When you
+    import an STL into Fusion 360, SolidWorks, or Onshape, most of them will accept it, but only as a
+    "mesh body" — a separate category of object that behaves nothing like a native part. You typically
+    can't extrude a face, fillet an edge, or type in an exact dimension and have the model update, because
+    the software has no idea which triangles are supposed to represent a single flat face versus a curve.
+  </p>
+  <p>
+    3MF improves on STL in a few real ways — it can store color, material, and multiple objects in one
+    file, and it's a structured ZIP-based format instead of STL's older, looser text/binary formats — but
+    the underlying geometry is still a triangle mesh. Converting from STL to 3MF (or the reverse) doesn't
+    solve the editability problem; both are meshes.
+  </p>
+
+  <h2>What a STEP file adds</h2>
+  <p>
+    STEP (ISO 10303, informally ".step" or ".stp") stores <strong>boundary representation (BREP)</strong>
+    geometry: a solid is described as a closed shell of exact faces, each face has a precise mathematical
+    surface type (plane, cylinder, cone, NURBS patch for free-form curves), and faces meet at real edges
+    with known geometry. A hole is stored as an actual cylindrical surface, not an approximation built from
+    dozens of tiny flat facets. This is the same internal representation used by CAD kernels like
+    OpenCascade, ACIS, and Parasolid — which is why STEP is the de facto standard interchange format
+    between different CAD packages, and why importing one gives you a solid you can actually work with:
+    select a real face, apply a fillet, extrude a sketch on it, or take an exact measurement.
+  </p>
+
+  <h2>Converting a mesh into a STEP solid</h2>
+  <p>
+    Going the other direction — mesh to STEP — is where this site's converter comes in, and it's worth
+    understanding what actually happens: the tool doesn't magically recover the "real" curved surfaces
+    that a scan or a printable model file lost. What it does is take the closed triangle mesh and wrap it
+    in a valid BREP shell, so the result is a legitimate solid body that CAD software will treat as native
+    geometry — you can measure it, fillet it, boolean it against other parts, and extrude new features
+    from it. The individual triangular facets are usually preserved as tiny flat faces rather than
+    reconstructed into smooth curves, unless a smoothing step is applied first (see the
+    <a href="safe-smoothing-explained.html">safe smoothing guide</a>) to merge groups of near-coplanar
+    triangles into larger, cleaner flat faces. What you get is closer to "a mesh made of real CAD faces"
+    than "a fully idealized parametric part" — which is still a large practical upgrade, since it's now
+    editable, measurable, and combinable with other STEP parts in ways a raw mesh never was.
+  </p>
+
+  <h2>When you actually need STEP vs. when STL/3MF is fine</h2>
+  <table>
+    <tr><th>Use case</th><th>Best format</th></tr>
+    <tr><td>Sending a model to a 3D print slicer (Cura, PrusaSlicer, Bambu Studio)</td><td>STL or 3MF — slicers work in triangles anyway</td></tr>
+    <tr><td>Quickly sharing or viewing a shape online</td><td>STL or 3MF — smaller, universally supported for viewing</td></tr>
+    <tr><td>Editing dimensions, adding features, or combining parts in CAD</td><td>STEP</td></tr>
+    <tr><td>Sending a part for CNC machining or a manufacturing quote</td><td>STEP — most shops require it, not a mesh</td></tr>
+    <tr><td>Repairing or modifying a scanned or downloaded model</td><td>STEP, after conversion (see the <a href="prepare-a-download-for-cad.html">prep guide</a>)</td></tr>
+    <tr><td>Taking an exact measurement or checking a tolerance</td><td>STEP — a mesh's dimensions are only as accurate as its triangle density</td></tr>
+  </table>
+
+  <p>
+    If you're only ever going to 3D print the file as-is, converting to STEP adds nothing. The moment you
+    need to change the design, combine it with something else, or hand it to CAD or manufacturing
+    software, a mesh becomes a real obstacle — and that's the specific problem this tool exists to solve.
+  </p>
+
+  <a class="cta" href="../converter.html">Convert an STL or 3MF file now →</a>
+
+  <a class="back" href="../converter.html">&larr; Back to the converter</a>
+
+  <footer>STL/3MF to STEP Converter — <a href="../about.html">About this project</a></footer>
+</div>
+</body>
+</html>

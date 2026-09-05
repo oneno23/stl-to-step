@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What "safe smoothing" does, and why it won't ruin your dimensions — STL/3MF to STEP Converter</title>
+<meta name="description" content="How the converter's smoothing tolerance works: merging noisy mesh triangles into clean CAD faces without moving any vertex further than you allow.">
+<link rel="canonical" href="https://stltostep.app/guides/safe-smoothing-explained.html">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://stltostep.app/guides/safe-smoothing-explained.html">
+<meta property="og:title" content="What &quot;safe smoothing&quot; does, and why it won't ruin your dimensions">
+<meta property="og:description" content="How the converter's smoothing tolerance works, and how to choose it.">
+<meta property="og:image" content="https://stltostep.app/ogimage.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="What &quot;safe smoothing&quot; does, and why it won't ruin your dimensions">
+<meta name="twitter:description" content="How the converter's smoothing tolerance works, and how to choose it.">
+<meta name="twitter:image" content="https://stltostep.app/ogimage.png">
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-border: #262b36;
+    --text: #e8eaed;
+    --text-dim: #9aa2b1;
+    --accent: #5b8def;
+    --accent-dim: #2c3f66;
+    --ok: #4caf7d;
+    --warn: #e0a94c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 32px 16px 64px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 14px; margin: 0 0 28px; max-width: 60ch; }
+  h2 { font-size: 17px; margin: 28px 0 8px; color: var(--text); }
+  h3 { font-size: 14px; margin: 18px 0 6px; color: var(--text); }
+  p, li { color: var(--text); font-size: 14px; }
+  ol, ul { margin: 8px 0; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 14px 0 20px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--panel-border); }
+  th { color: var(--text-dim); font-weight: 600; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 22px 22px 24px;
+    margin-bottom: 16px;
+  }
+  .back-top { display: inline-block; margin: 0 0 16px; font-size: 14px; }
+  .back { display: inline-block; margin-top: 24px; font-size: 14px; }
+  footer { color: var(--text-dim); font-size: 12px; text-align: center; margin-top: 32px; }
+  code {
+    background: rgba(91,141,239,0.12);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .note {
+    font-size: 13px;
+    color: var(--text-dim);
+    background: rgba(91,141,239,0.06);
+    border: 1px solid var(--accent-dim);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+  }
+  .warn-note {
+    font-size: 13px;
+    color: var(--text);
+    background: rgba(224,169,76,0.08);
+    border: 1px solid #4a3d24;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+  }
+  .cta {
+    display: block;
+    text-align: center;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 13px;
+    border-radius: 8px;
+    margin: 20px 0 6px;
+  }
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"What \"safe smoothing\" does, and why it won't ruin your dimensions","description":"How the converter's smoothing tolerance works: merging noisy mesh triangles into clean CAD faces without moving any vertex further than you allow.","url":"https://stltostep.app/guides/safe-smoothing-explained.html"}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back-top" href="../converter.html">&larr; Back to the converter</a>
+  <h1>What "safe smoothing" does, and why it won't ruin your dimensions</h1>
+  <p class="subtitle">
+    A converted mesh can come out with thousands of unnecessary tiny faces. Here's what the smoothing
+    slider actually does about that, and how to pick a value with confidence.
+  </p>
+
+  <div class="panel">
+    <h2 style="margin-top:0;">The problem: meshes are noisier than they look</h2>
+    <p>
+      A mesh that looks perfectly smooth in a 3D viewer can still be made of an enormous number of nearly
+      flat, nearly co-planar triangles. This is especially common with two sources: phone or handheld 3D
+      scans, where the scanning software oversamples flat surfaces just to be safe, and certain slicers or
+      export pipelines that re-tessellate a shape into far more triangles than its geometry needs. Convert
+      that kind of mesh into a STEP solid with no changes at all — see the
+      <a href="stl-vs-step.html">STL vs. STEP guide</a> for what "converting" a mesh actually means — and
+      you get a technically valid solid where a single flat wall is represented as hundreds of separate
+      tiny CAD faces instead of one. It behaves correctly, but it's unpleasant to work with: selecting "the
+      wall" in your CAD software selects one facet out of hundreds, and the file is needlessly large.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2>What smoothing actually does</h2>
+    <p>
+      Smoothing looks for groups of triangles that are already nearly flush with each other — nearly
+      co-planar, within a small angular tolerance — and merges them into a single larger flat face. A
+      surface that was 400 tiny triangles pretending to be one wall becomes one real CAD face representing
+      that wall. This is a simplification of the <em>mesh</em>, not a reconstruction of some "true" curved
+      surface the mesh never actually described — merging flat facets doesn't invent curvature that wasn't
+      there, it just stops representing a flat area as needlessly many separate faces.
+    </p>
+    <p>
+      The part that makes this safe rather than lossy is a <strong>hard displacement limit</strong>: when
+      merging triangles, the converter never moves a vertex further from its original position than the
+      maximum tolerance you set. Every merged face still passes through the mesh's original surface within
+      that bound. A wall that was flat to begin with ends up exactly flat, at the same position. A wall
+      that had genuine small bumps or scan noise gets smoothed toward flat, but only up to the distance
+      you allowed — it can't drift arbitrarily far from where the original mesh actually was.
+    </p>
+  </div>
+
+  <div class="panel">
+    <h2>The control you actually see</h2>
+    <p>
+      In the converter, this is the <strong>"Maximum smoothing allowed per vertex"</strong> slider, ranging
+      from 0&nbsp;mm to 0.5&nbsp;mm, defaulting to 0.1&nbsp;mm. Setting it to <code>0</code> disables
+      smoothing entirely — every original triangle becomes its own tiny CAD face, a fully literal,
+      face-for-face conversion of the mesh. Raising it lets the converter merge triangles as long as no
+      point moves more than that many millimeters from where it started.
+    </p>
+    <div class="note">
+      Because the limit applies per vertex, not per object, a large flat panel and a small precision
+      feature on the same model are each held to the same absolute tolerance — a 0.1&nbsp;mm setting means
+      no point on the entire part moves more than 0.1&nbsp;mm, regardless of how big the part is.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Choosing a value</h2>
+    <table>
+      <tr><th>Situation</th><th>Suggested setting</th></tr>
+      <tr><td>High-precision mechanical part, tight-fit surfaces, exact reference geometry</td><td><code>0&nbsp;mm</code> — keep a literal, unaltered conversion</td></tr>
+      <tr><td>Model downloaded from a marketplace, reasonably clean mesh</td><td>Default (<code>0.1&nbsp;mm</code>) is usually fine</td></tr>
+      <tr><td>Phone or handheld 3D scan with visible surface noise</td><td>0.1&nbsp;mm–0.3&nbsp;mm, checked against the 3D preview</td></tr>
+      <tr><td>Purely cosmetic model, file size or face count matters more than exact geometry</td><td>Higher end of the range (up to 0.5&nbsp;mm)</td></tr>
+    </table>
+    <p>
+      When in doubt, start at the default, look at the result in the converter's 3D preview, and only
+      change it if you can actually see a problem — either leftover facet noise (raise the tolerance) or a
+      feature that looks softened when it needs to stay sharp (lower it, down to 0 if necessary). The
+      preview reflects the exact solid you'll download, so there's no guessing involved.
+    </p>
+  </div>
+
+  <div class="warn-note">
+    Smoothing only merges triangles that are already close to flush — it's not a general mesh-repair or
+    noise-removal tool. If a mesh has actual holes, self-intersections, or non-manifold geometry, smoothing
+    won't fix that; see the <a href="prepare-a-download-for-cad.html">prep guide</a> for what to do about a
+    broken mesh before converting.
+  </div>
+
+  <a class="cta" href="../converter.html">Try it with your own file →</a>
+
+  <a class="back" href="../converter.html">&larr; Back to the converter</a>
+
+  <footer>STL/3MF to STEP Converter — <a href="../about.html">About this project</a></footer>
+</div>
+</body>
+</html>
