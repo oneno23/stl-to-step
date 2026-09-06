@@ -259,6 +259,66 @@ function buildMesh(rawTris, epsilon = 1e-5) {
   return { vertices, faces };
 }
 
+// meshoptimizer's QEM (quadric error metric) simplifier, loaded lazily and once. It's a
+// single self-contained ~55 KB file (WASM embedded as base64), MIT-licensed -- so, unlike
+// MeshFix, it's safe to ship on a site that runs ads. The ?v= is a manual version tag: bump
+// it only if meshopt_simplifier.js itself is ever replaced, so browsers pick up the new one.
+let _meshoptPromise = null;
+function loadMeshopt() {
+  if (!_meshoptPromise) {
+    _meshoptPromise = import("./meshopt_simplifier.js?v=1")
+      .then((m) => m.MeshoptSimplifier.ready.then(() => m.MeshoptSimplifier));
+  }
+  return _meshoptPromise;
+}
+
+// Reduce an indexed mesh ({vertices:[[x,y,z],...], faces:[[a,b,c],...]}) down to roughly
+// targetTris triangles using quadric edge-collapse decimation, then drop any vertices no
+// longer referenced. meshopt collapses the cheapest edges first (least deviation from the
+// original surface) and keeps surviving vertices at their original positions, so the shape
+// is preserved as closely as the target allows and no vertex is invented off the surface.
+// Returns a brand-new {vertices, faces}; never mutates the input.
+async function decimateMesh(vertices, faces, targetTris) {
+  const simplifier = await loadMeshopt();
+  if (!simplifier || !simplifier.supported) throw new Error("mesh simplifier unavailable in this browser");
+
+  const vCount = vertices.length;
+  const positions = new Float32Array(vCount * 3);
+  for (let i = 0; i < vCount; i++) {
+    positions[i * 3] = vertices[i][0];
+    positions[i * 3 + 1] = vertices[i][1];
+    positions[i * 3 + 2] = vertices[i][2];
+  }
+  const indices = new Uint32Array(faces.length * 3);
+  for (let i = 0; i < faces.length; i++) {
+    indices[i * 3] = faces[i][0];
+    indices[i * 3 + 1] = faces[i][1];
+    indices[i * 3 + 2] = faces[i][2];
+  }
+
+  const targetIndexCount = Math.max(3, Math.floor(targetTris) * 3);
+  // target_error 1.0 (very large) lets it actually reach the requested count; the QEM
+  // ordering still means it's the least-damaging collapses that happen. It may stop early
+  // and return more triangles than requested if going further would break the mesh.
+  const [newIndices] = simplifier.simplify(indices, positions, 3, targetIndexCount, 1.0);
+
+  // Compact: keep only vertices the simplified index buffer still references.
+  const remap = new Int32Array(vCount).fill(-1);
+  const newVertices = [];
+  const newFaces = [];
+  for (let i = 0; i < newIndices.length; i += 3) {
+    const tri = [0, 0, 0];
+    for (let k = 0; k < 3; k++) {
+      const oldIdx = newIndices[i + k];
+      let ni = remap[oldIdx];
+      if (ni === -1) { ni = newVertices.length; remap[oldIdx] = ni; newVertices.push(vertices[oldIdx]); }
+      tri[k] = ni;
+    }
+    newFaces.push(tri);
+  }
+  return { vertices: newVertices, faces: newFaces };
+}
+
 function computeAdjacency(vertices, faces) {
   const adjacency = Array.from({ length: vertices.length }, () => new Set());
   const edgeSet = new Set();
@@ -491,6 +551,37 @@ const viewWireframe = document.getElementById("viewWireframe");
 const viewFlatShading = document.getElementById("viewFlatShading");
 const zipPickerPanel = document.getElementById("zipPickerPanel");
 const zipPickerList = document.getElementById("zipPickerList");
+const decimateEnable = document.getElementById("decimateEnable");
+const decimateControls = document.getElementById("decimateControls");
+const decimatePct = document.getElementById("decimatePct");
+const decimatePctVal = document.getElementById("decimatePctVal");
+const decimateTarget = document.getElementById("decimateTarget");
+const decimateInfo = document.getElementById("decimateInfo");
+
+// Best-effort triangle count of the currently selected file, filled in asynchronously
+// after a file is chosen so the decimation slider/target can show real numbers. Purely
+// informational -- the conversion itself re-parses the file, so if this fails the
+// decimation still works, it just won't preview the resulting triangle count.
+let pendingMeshInfo = null;
+
+function updateDecimateReadout() {
+  const pct = parseInt(decimatePct.value, 10) || 50;
+  if (pendingMeshInfo) {
+    const approx = Math.round(pendingMeshInfo.triangles * pct / 100);
+    decimatePctVal.textContent = pct + "% (~" + approx.toLocaleString() + ")";
+    decimateInfo.textContent = "of ~" + pendingMeshInfo.triangles.toLocaleString();
+    decimateTarget.max = pendingMeshInfo.triangles;
+  } else {
+    decimatePctVal.textContent = pct + "%";
+    decimateInfo.textContent = "";
+  }
+}
+
+decimateEnable.addEventListener("change", () => {
+  decimateControls.style.display = decimateEnable.checked ? "" : "none";
+  updateDecimateReadout();
+});
+decimatePct.addEventListener("input", updateDecimateReadout);
 
 viewOptSmoothed.addEventListener("change", () => { if (viewOptSmoothed.checked) Viewer.showDataset("smoothed"); });
 viewOptOriginal.addEventListener("change", () => { if (viewOptOriginal.checked) Viewer.showDataset("original"); });
@@ -597,6 +688,27 @@ async function handleIncomingFile(name, getBuffer, sizeHint) {
 
 function setPendingFile(pf) { pendingFile = pf; fnameEl.textContent = pf.name + (pf.size ? " (" + (pf.size/1024).toFixed(0) + " KB)" : ""); convertBtn.style.display = "block"; convertBtn.disabled = false; convertBtn.textContent = "Convert to STEP";
   resultsPanel.style.display = "none";
+  analyzePendingMesh(pf);
+}
+
+// Parse the chosen file just to learn its triangle count, so the decimation control can
+// show real numbers ("50% (~25,600) of ~51,200"). Best-effort and non-blocking: any failure
+// is swallowed, and the actual conversion re-parses the file independently.
+async function analyzePendingMesh(pf) {
+  pendingMeshInfo = null;
+  updateDecimateReadout();
+  try {
+    const isThreeMF = /\.3mf$/i.test(pf.name);
+    const buf = await pf.getBuffer();
+    const rawTris = isThreeMF ? await parse3MF(buf) : parseSTL(buf);
+    const { faces } = buildMesh(rawTris);
+    if (pendingFile === pf) { // ignore if the user has since chosen another file
+      pendingMeshInfo = { triangles: faces.length };
+      updateDecimateReadout();
+    }
+  } catch (e) {
+    // Analysis is optional; the conversion path does its own parsing and error handling.
+  }
 }
 
 function log(msg, cls) {
@@ -780,8 +892,44 @@ convertBtn.addEventListener("click", async () => {
     log(isThreeMF ? "Reading 3MF..." : "Reading STL...");
     const buf = await pendingFile.getBuffer();
     const rawTris = isThreeMF ? await parse3MF(buf) : parseSTL(buf);
-    const { vertices, faces } = buildMesh(rawTris);
+    let { vertices, faces } = buildMesh(rawTris);
     log(`Mesh: ${vertices.length} vertices, ${faces.length} triangles.`);
+
+    // Optional mesh reduction (decimation) BEFORE anything else, so the size warnings,
+    // the estimate, smoothing, the viewer and the STEP conversion all work on the reduced
+    // mesh. This is the fix for organic/scanned models whose STEP came out huge (a mesh
+    // becomes one BREP face per triangle, so file size tracks triangle count): fewer
+    // triangles -> a much smaller STEP that CAD apps like Shapr3D can actually open.
+    let didDecimate = false;
+    let trianglesBefore = faces.length;
+    if (decimateEnable.checked) {
+      const numRaw = parseInt(decimateTarget.value, 10);
+      const pct = parseInt(decimatePct.value, 10) || 50;
+      const targetTris = (Number.isFinite(numRaw) && numRaw > 0)
+        ? numRaw
+        : Math.round(trianglesBefore * pct / 100);
+      if (targetTris < trianglesBefore) {
+        log(`Reducing mesh from ${trianglesBefore.toLocaleString()} to ~${targetTris.toLocaleString()} triangles...`);
+        await yieldFrame();
+        try {
+          const reduced = await decimateMesh(vertices, faces, targetTris);
+          if (reduced.faces.length > 0 && reduced.faces.length < trianglesBefore) {
+            vertices = reduced.vertices;
+            faces = reduced.faces;
+            didDecimate = true;
+            log(`Mesh reduced: ${trianglesBefore.toLocaleString()} -> ${faces.length.toLocaleString()} triangles (${Math.round(100 * faces.length / trianglesBefore)}% kept, ${vertices.length.toLocaleString()} vertices).`, "ok");
+          } else {
+            log("Reduction did not lower the triangle count (mesh may already be minimal); converting the full mesh.", "warn");
+          }
+        } catch (err) {
+          log(`Could not reduce the mesh (${err && err.message ? err.message : err}); converting the full mesh instead.`, "warn");
+        }
+        await yieldFrame();
+      } else {
+        log(`Reduction target (${targetTris.toLocaleString()}) is not below the mesh size (${trianglesBefore.toLocaleString()}); no reduction applied.`);
+      }
+    }
+
     const estSecondsPreflight = estimateSewSeconds(faces.length);
     const VERY_LARGE_FACE_THRESHOLD = 300000;
     if (faces.length > VERY_LARGE_FACE_THRESHOLD) {
@@ -820,7 +968,7 @@ convertBtn.addEventListener("click", async () => {
     setProgress(5);
 
     setProgress(10);
-    const outName = (pendingFile.name.replace(/\.(stl|3mf)$/i, "") || "modelo") + (maxDisp > 0 ? "_smoothed" : "") + ".step";
+    const outName = (pendingFile.name.replace(/\.(stl|3mf)$/i, "") || "modelo") + (didDecimate ? "_reduced" : "") + (maxDisp > 0 ? "_smoothed" : "") + ".step";
 
     const { buffer, byteLength } = await convertInSandbox(smoothed, faces, {
       onLog: (text, cls) => log(text, cls),
@@ -843,6 +991,7 @@ convertBtn.addEventListener("click", async () => {
       <tr><td>Max displacement</td><td>${stats.maxDisp.toFixed(3)} mm</td></tr>
       <tr><td>Mean displacement</td><td>${stats.meanDisp.toFixed(3)} mm</td></tr>
       <tr><td>Protected vertices (sin tocar)</td><td>${frozenCount} / ${vertices.length}</td></tr>
+      <tr><td>Triangles converted</td><td>${faces.length.toLocaleString()}${didDecimate ? ` (reduced from ${trianglesBefore.toLocaleString()})` : ""}</td></tr>
       <tr><td>STEP file size</td><td>${(data.length/1024/1024).toFixed(1)} MB</td></tr>
     `;
     resultsPanel.style.display = "block";

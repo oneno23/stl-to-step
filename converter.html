@@ -73,6 +73,10 @@
   input[type=range] { flex: 1; accent-color: var(--accent); }
   .rangeval { font-family: var(--mono); font-size: 13px; min-width: 64px; text-align: right; }
   .hint { font-size: 12px; color: var(--text-dim); margin-top: 6px; line-height: 1.5; }
+  .checkline { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text); line-height: 1.5; }
+  .checkline input[type=checkbox] { accent-color: var(--accent); margin-top: 3px; flex-shrink: 0; }
+  input[type=number] { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--panel-border); border-radius: 6px; padding: 8px 10px; font-family: var(--mono); font-size: 14px; }
+  input[type=number]:focus { outline: none; border-color: var(--accent); }
   button.primary {
     width: 100%;
     background: var(--accent);
@@ -297,6 +301,26 @@
     <div class="hint">
       0 mm = no smoothing. A higher value smooths the mesh without moving any vertex further than that distance,
       automatically protecting edges and tight-fit areas.
+    </div>
+  </div>
+
+  <div class="panel">
+    <label class="field">3. Reduce triangle count (optional)</label>
+    <label class="checkline"><input type="checkbox" id="decimateEnable"> Reduce the mesh before converting — recommended for dense scans, photogrammetry, AI-generated models, or any model whose STEP comes out too large for your CAD app to open.</label>
+    <div id="decimateControls" style="display:none; margin-top:14px;">
+      <label class="field">Keep this share of the triangles</label>
+      <div class="row">
+        <input type="range" id="decimatePct" min="5" max="95" step="5" value="50">
+        <div class="rangeval" id="decimatePctVal">50%</div>
+      </div>
+      <label class="field" style="margin-top:14px;">Or set an exact target number of triangles (overrides the slider)</label>
+      <div class="row">
+        <input type="number" id="decimateTarget" min="100" step="500" placeholder="e.g. 15000">
+        <div class="rangeval" id="decimateInfo"></div>
+      </div>
+      <div class="hint">
+        Uses quadric decimation (QEM): it removes the least-important detail first, so the overall shape is kept while the triangle count — and the STEP file size — drop a lot. Very fine surface detail may be lost. Leave this off for a 1:1 mesh-to-solid conversion.
+      </div>
     </div>
   </div>
 
