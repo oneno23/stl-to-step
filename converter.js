@@ -653,7 +653,19 @@ function ensureSandbox() {
   if (sandboxReadyPromise) return sandboxReadyPromise;
   sandboxReadyPromise = new Promise((resolve) => {
     sandboxFrame = document.createElement("iframe");
-    sandboxFrame.src = "sandbox.html";
+    // Cache-buster for the conversion engine. The sandbox chain
+    // (sandbox.html -> sandbox.js -> sandbox-worker.js) is loaded lazily, only when
+    // the user first converts -- which is AFTER any page (re)load has already finished.
+    // That means a normal hard reload (Ctrl+Shift+R) never refetches it, and browsers
+    // happily kept serving a stale cached copy of the engine for hours after a deploy:
+    // a real bug where users ran old code (e.g. a version that froze the tab and wrote
+    // huge STEP files) with no way to force the new one short of clearing site data.
+    // A unique token per page load makes the browser fetch the current chain every time.
+    // These three files total ~16 KB; the heavy ~50 MB WASM is imported by
+    // sandbox-worker.js under its own fixed URL and stays cached normally, so this is free.
+    // The token propagates down the chain: sandbox.html reads it from its own URL and
+    // uses it to load sandbox.js, which uses it to load sandbox-worker.js.
+    sandboxFrame.src = "sandbox.html?v=" + Date.now();
     sandboxFrame.style.display = "none";
     const onReady = (event) => {
       if (event.data && event.data.type === "sandbox-ready") {

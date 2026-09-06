@@ -26,6 +26,15 @@
   same-origin), which used to trigger Chrome's "page isn't responding"
   dialog on dense meshes. See sandbox.js and sandbox-worker.js for details.
 -->
-<script type="module" src="sandbox.js"></script>
+<!--
+  Load sandbox.js carrying the same cache-buster token this page was loaded with
+  (converter.js sets it as ?v=... on this iframe's src). This propagates the token
+  one step down the chain so sandbox.js is fetched fresh too, never from a stale
+  cache. If this page was opened without a token (?v absent), location.search is
+  empty and sandbox.js just loads normally.
+-->
+<script type="module">
+  import("./sandbox.js" + location.search);
+</script>
 </body>
 </html>

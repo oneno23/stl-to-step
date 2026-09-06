@@ -24,7 +24,10 @@ let worker = null;
 
 function getWorker() {
   if (worker) return worker;
-  worker = new Worker("sandbox-worker.js", { type: "module" });
+  // Carry the cache-buster token (see converter.js) one final step, to the worker file,
+  // so it too is fetched fresh instead of from a stale cache. self.location.search is
+  // the "?v=..." this sandbox page was loaded with (empty if none was passed).
+  worker = new Worker("sandbox-worker.js" + self.location.search, { type: "module" });
   const sources = new Map(); // requestId -> the window to relay each response to
   worker.sources = sources;
   worker.addEventListener("message", (event) => {
