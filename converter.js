@@ -632,15 +632,17 @@ function formatDuration(totalSeconds) {
 const VIEWER_MAX_FACES = 150000;
 
 // ---------------------------------------------------------------------
-// Sandbox bridge: the actual OpenCASCADE/WASM work runs inside
-// sandbox.html, a page declared under manifest.json's "sandbox.pages".
-// Normal extension pages (this one included) are locked to a CSP of
-// script-src 'self' with NO eval/new Function allowed at all -- but
-// opencascade.js's Emscripten/embind glue code calls `new Function(...)`
-// during startup (to build named Error subclasses), which throws under
-// that CSP. Sandboxed pages get a relaxed default CSP that permits
-// 'unsafe-eval', so we hand the mesh off to that iframe over postMessage
-// and get STEP bytes back. See sandbox.html for details.
+// Sandbox bridge: the actual OpenCASCADE/WASM work runs inside a Worker
+// spawned from sandbox.html, a page declared under manifest.json's
+// "sandbox.pages". Normal extension pages (this one included) are locked
+// to a CSP of script-src 'self' with NO eval/new Function allowed at all
+// -- but opencascade.js's Emscripten/embind glue code calls
+// `new Function(...)` during startup (to build named Error subclasses),
+// which throws under that CSP. Sandboxed pages get a relaxed default CSP
+// that permits 'unsafe-eval' (inherited by Workers they spawn), so we
+// hand the mesh off to that iframe over postMessage and get STEP bytes
+// back; the iframe itself just relays to/from its Worker. See
+// sandbox.html and sandbox.js for details.
 // ---------------------------------------------------------------------
 let sandboxFrame = null;
 let sandboxReadyPromise = null;
@@ -698,15 +700,22 @@ async function convertInSandbox(vertices, faces, { onLog, onProgress }) {
     flatFaces[i * 3 + 2] = faces[i][2];
   }
 
-  // The sandboxed iframe runs the whole OpenCASCADE/WASM conversion, including one long,
-  // fully synchronous "sewing" call that reports no progress until it's done. If that iframe
-  // silently dies mid-conversion (running out of the browser's memory is the usual cause on
-  // very dense meshes), no "done" or "error" message ever arrives, and without a watchdog this
-  // Promise -- and the whole UI -- would hang forever with the tab sitting at 0% CPU and no
-  // way to recover short of reloading the whole page. This ties a generous, size-scaled
-  // timeout to the same estimate shown to the user, and on timeout tears down the (presumed
-  // dead) sandbox iframe so the *next* attempt gets a fresh one instead of posting into a
-  // frame that will never answer.
+  // The sandboxed iframe (really, the Worker it spawns -- see sandbox.js) runs the whole
+  // OpenCASCADE/WASM conversion, including one long, fully synchronous "sewing" call that
+  // reports no progress until it's done. That call now runs on its own thread instead of
+  // this shared one, so it no longer blocks this heartbeat from firing on schedule (it used
+  // to: a real 234,826-triangle test showed the heartbeat going silent and Chrome's own
+  // "page isn't responding" dialog appearing during that exact call, back when it ran
+  // directly in the iframe). The heartbeat below is therefore now a reliable "still alive"
+  // signal during that wait, not just a best-effort one.
+  //
+  // Separately, if the worker silently dies mid-conversion (running out of the browser's
+  // memory is the usual cause on very dense meshes), no "done" or "error" message ever
+  // arrives, and without a watchdog this Promise -- and the whole UI -- would hang forever
+  // with the tab sitting at 0% CPU and no way to recover short of reloading the whole page.
+  // This ties a generous, size-scaled timeout to the same estimate shown to the user, and on
+  // timeout tears down the (presumed dead) sandbox iframe so the *next* attempt gets a fresh
+  // one instead of posting into a frame that will never answer.
   const estSeconds = estimateSewSeconds(faces.length);
   const timeoutMs = Math.max(3 * 60 * 1000, estSeconds * 1000 * 2.5);
   const heartbeatMs = Math.min(5 * 60 * 1000, Math.max(45 * 1000, (estSeconds * 1000) / 8));
